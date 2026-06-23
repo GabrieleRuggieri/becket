@@ -1,0 +1,77 @@
+# ===== RepoCtx (tool output) =====
+.repoctx/
+
+# ===== Rust =====
+/target/
+**/*.rs.bk
+
+# ===== Node / npm (wrapper & website tooling) =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ===== Build & distribution =====
+/dist/
+/build/
+/out/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ===== Environment & secrets =====
+.env
+.env.*
+!.env.example
+
+# ===== OS =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===== Editors & IDEs =====
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# ===== Logs & debug =====
+*.log
+logs/
+
+# ===== Test & coverage =====
+/coverage/
+*.profraw
+*.profdata
+
+# ===== Caches =====
+.cache/
+*.cache
+.sass-cache/
+
+# ===== ONNX / local model cache (downloaded on first build) =====
+/models/
+*.onnx
+
+# ===== Netlify =====
+.netlify/
+
+# ===== Misc =====
+*.tmp
+*.temp
+*.bak
+
+# ===== Rules =====
+RULES.md

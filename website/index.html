@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="RepoCtx — AI Context & Impact Engine for Codebases" />
+  <title>RepoCtx — AI Context & Impact Engine</title>
+  <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
+  <link rel="preload" href="css/styles.css" as="style" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+  <script>try{var t=localStorage.getItem("repoctx-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+  <canvas id="particles" aria-hidden="true"></canvas>
+  <div class="glow glow-1" aria-hidden="true"></div>
+  <div class="glow glow-2" aria-hidden="true"></div>
+
+  <header class="nav" id="nav">
+    <div class="nav-inner container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon"></span>
+        <span>RepoCtx</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#problem" data-i18n="nav.problem">Problem</a>
+        <a href="#solution" data-i18n="nav.solution">Solution</a>
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#integrations" data-i18n="nav.integrations">Integrations</a>
+        <a href="docs.html" data-i18n="nav.docs">Docs</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn-icon" id="lang-toggle" aria-label="Switch language">EN</button>
+        <button class="btn-icon" id="theme-toggle" aria-label="Toggle theme">
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <a href="docs.html#install" class="btn btn-primary" data-i18n="nav.getStarted">Get Started</a>
+      </div>
+      <button class="nav-burger" id="nav-burger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="container hero-grid">
+      <div class="hero-content reveal">
+        <div class="badge" data-i18n="hero.badge">Open Source · Local-First · Apache-2.0</div>
+        <h1>
+          <span data-i18n="hero.title1">The semantic layer</span><br />
+          <span class="gradient-text" data-i18n="hero.title2">between code & AI</span>
+        </h1>
+        <p class="hero-sub" data-i18n="hero.sub">
+          RepoCtx transforms repositories into structured, queryable knowledge — giving AI agents and developers precise context, impact analysis, and architectural understanding.
+        </p>
+        <div class="hero-cta">
+          <a href="docs.html#install" class="btn btn-primary btn-lg" data-i18n="hero.cta1">Install RepoCtx</a>
+          <a href="docs.html" class="btn btn-glass btn-lg" data-i18n="hero.cta2">Read the Docs</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat glass-card">
+            <span class="stat-num">100%</span>
+            <span class="stat-label" data-i18n="hero.stat1">Local & Free</span>
+          </div>
+          <div class="stat glass-card">
+            <span class="stat-num">0</span>
+            <span class="stat-label" data-i18n="hero.stat2">Telemetry</span>
+          </div>
+          <div class="stat glass-card">
+            <span class="stat-num">MCP</span>
+            <span class="stat-label" data-i18n="hero.stat3">Agent Ready</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-terminal reveal" data-delay="200">
+        <div class="terminal glass-card">
+          <div class="terminal-bar">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+            <span class="terminal-title">repoctx</span>
+          </div>
+          <div class="terminal-body">
+            <pre><code id="typing-output"></code><span class="cursor-blink">▊</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="section" id="problem">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag" data-i18n="problem.tag">The Problem</span>
+        <h2 data-i18n="problem.title">AI tools are powerful, but context-blind</h2>
+        <p data-i18n="problem.sub">Modern coding agents hit hard limits when dealing with real-world codebases.</p>
+      </div>
+      <div class="cards-grid">
+        <article class="glass-card card reveal" data-delay="0">
+          <div class="card-icon">⬡</div>
+          <h3 data-i18n="problem.c1.title">Context Window Limits</h3>
+          <p data-i18n="problem.c1.desc">Repositories with thousands of files and scattered domain logic exceed what any model can hold in memory.</p>
+        </article>
+        <article class="glass-card card reveal" data-delay="100">
+          <div class="card-icon">◇</div>
+          <h3 data-i18n="problem.c2.title">No Architectural View</h3>
+          <p data-i18n="problem.c2.desc">LLMs understand local snippets but fail to reconstruct system-wide architecture and hallucinate dependencies.</p>
+        </article>
+        <article class="glass-card card reveal" data-delay="200">
+          <div class="card-icon">△</div>
+          <h3 data-i18n="problem.c3.title">Poor Impact Awareness</h3>
+          <p data-i18n="problem.c3.desc">Agents modify code without understanding side effects, breaking unrelated features and missing hidden deps.</p>
+        </article>
+        <article class="glass-card card reveal" data-delay="300">
+          <div class="card-icon">○</div>
+          <h3 data-i18n="problem.c4.title">No Persistent Memory</h3>
+          <p data-i18n="problem.c4.desc">Every session starts from zero — repeated analysis cost, inconsistent reasoning over time.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution -->
+  <section class="section section-alt" id="solution">
+    <div class="container">
+      <div class="split reveal">
+        <div class="split-content">
+          <span class="section-tag" data-i18n="solution.tag">The Solution</span>
+          <h2 data-i18n="solution.title">Precomputed understanding, not raw files</h2>
+          <blockquote class="quote glass-card">
+            <p data-i18n="solution.quote">"Here is a structured, precomputed understanding of the repository"</p>
+          </blockquote>
+          <p data-i18n="solution.desc">RepoCtx builds a persistent local intelligence layer — architecture, flows, dependencies, symbols, and impact maps — queryable by humans and AI agents alike.</p>
+          <ul class="check-list">
+            <li data-i18n="solution.li1">Reduces token usage & hallucinations</li>
+            <li data-i18n="solution.li2">Increases accuracy & consistency</li>
+            <li data-i18n="solution.li3">Eliminates context rebuilding cost</li>
+          </ul>
+        </div>
+        <div class="split-visual">
+          <div class="flow-diagram glass-card">
+            <div class="flow-node" data-i18n="solution.flow1">Source Code</div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-node accent" data-i18n="solution.flow2">RepoCtx Engine</div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-branches">
+              <div class="flow-node small" data-i18n="solution.flow3">Architecture</div>
+              <div class="flow-node small" data-i18n="solution.flow4">Flows</div>
+              <div class="flow-node small" data-i18n="solution.flow5">Impact</div>
+              <div class="flow-node small" data-i18n="solution.flow6">Context</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-node" data-i18n="solution.flow7">AI Agents & Devs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag" data-i18n="features.tag">Key Features</span>
+        <h2 data-i18n="features.title">Built for precision, not guesswork</h2>
+      </div>
+      <div class="features-grid">
+        <article class="feature glass-card reveal" data-delay="0">
+          <div class="feature-num">01</div>
+          <h3 data-i18n="features.f1.title">Impact Analysis Engine</h3>
+          <p data-i18n="features.f1.desc">Determines exactly what breaks when a component changes — modules, tests, risk zones.</p>
+        </article>
+        <article class="feature glass-card reveal" data-delay="100">
+          <div class="feature-num">02</div>
+          <h3 data-i18n="features.f2.title">Semantic Flow Reconstruction</h3>
+          <p data-i18n="features.f2.desc">Reconstructs end-to-end business flows across services, modules, and external systems.</p>
+        </article>
+        <article class="feature glass-card reveal" data-delay="200">
+          <div class="feature-num">03</div>
+          <h3 data-i18n="features.f3.title">Repository Memory Layer</h3>
+          <p data-i18n="features.f3.desc">Persistent structural understanding that survives across sessions and agent runs.</p>
+        </article>
+        <article class="feature glass-card reveal" data-delay="300">
+          <div class="feature-num">04</div>
+          <h3 data-i18n="features.f4.title">AI Context Compression</h3>
+          <p data-i18n="features.f4.desc">Reduces massive codebases into minimal, token-optimized context for LLM consumption.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Integrations -->
+  <section class="section section-alt" id="integrations">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag" data-i18n="integrations.tag">Integrations</span>
+        <h2 data-i18n="integrations.title">Agent-agnostic by design</h2>
+        <p data-i18n="integrations.sub">Works with any AI coding tool via CLI or MCP.</p>
+      </div>
+      <div class="integrations-grid reveal">
+        <div class="integration glass-card">
+          <h3>Cursor</h3>
+          <p data-i18n="integrations.cursor">Background context provider — architectural awareness for suggestions and multi-file edits.</p>
+        </div>
+        <div class="integration glass-card">
+          <h3>Claude Code</h3>
+          <p data-i18n="integrations.claude">Agents call repoctx context, impact, and flow before modifying code.</p>
+        </div>
+        <div class="integration glass-card">
+          <h3>OpenAI Codex</h3>
+          <p data-i18n="integrations.codex">Structured reasoning over large codebases via tool definitions.</p>
+        </div>
+        <div class="integration glass-card highlight">
+          <h3>MCP Server</h3>
+          <p data-i18n="integrations.mcp">repoctx-mcp exposes get_context, get_impact, get_flow, get_dependencies over stdio.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Vision CTA -->
+  <section class="section cta-section">
+    <div class="container reveal">
+      <div class="cta-box glass-card">
+        <h2 data-i18n="cta.title">The standard context layer for AI coding agents</h2>
+        <p data-i18n="cta.sub">Like Git for version control — RepoCtx for code understanding.</p>
+        <a href="docs.html#install" class="btn btn-primary btn-lg" data-i18n="cta.button">Start Building Context</a>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo-icon"></span>
+        <span>RepoCtx</span>
+      </div>
+      <p class="footer-copy" data-i18n="footer.copy">Open source under Apache-2.0 · 100% local · Zero telemetry</p>
+      <div class="footer-links">
+        <a href="docs.html" data-i18n="footer.docs">Documentation</a>
+        <a href="https://github.com" data-i18n="footer.github">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js" defer></script>
+  <script src="js/main.js" defer></script>
+</body>
+</html>
