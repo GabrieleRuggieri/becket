@@ -15,6 +15,8 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/GabrieleRuggieri/repo-ctx"
+homepage = "https://github.com/GabrieleRuggieri/repo-ctx"
+description = "Local codebase intelligence layer for AI agents"
 rust-version = "1.75"
 
 [workspace.dependencies]
@@ -52,3 +54,8 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 lto = true
 codegen-units = 1
 strip = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

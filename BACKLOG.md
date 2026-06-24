@@ -26,7 +26,7 @@
 | P1-2 | MCP | **Sampling** per enrichment nomi/summary (host model) | ✅ lazy + cache SQLite |
 | P1-3 | Security | Secret redaction prima di sampling | ✅ v0 regex in `redact.rs` |
 | P1-4 | Workspace | Multi-repo manifest + cross-repo linker | ✅ `repoctx.workspace.toml` + `workspace build` |
-| P1-5 | Distribuzione | `cargo-dist`, Homebrew tap, npm wrapper |
+| P1-5 | Distribuzione | `cargo-dist`, Homebrew tap, npm wrapper | ✅ dist + release CI + packaging docs |
 | P1-6 | Bench | Fixture small→huge + budget CI (200ms incremental, 100ms query p95) | ✅ `bench-small` + test CI |
 | P1-7 | Watch | `repoctx build --watch` | ✅ debounce 400ms, ignora `.repoctx`/`.git` |
 
@@ -36,16 +36,16 @@
 |---|---|---|
 | P2-1 | Plugins | Registry grammatiche tree-sitter per nuove lingue | ✅ `GrammarRegistry` + `repoctx.languages.toml` |
 | P2-2 | Docs | `CONTRIBUTING.md`, guida language plugin | ✅ CONTRIBUTING.md |
-| P2-3 | ADR | `docs/adr/` per decisioni future |
+| P2-3 | ADR | `docs/adr/` per decisioni future | ✅ ADR 0001–0005 |
 | P2-4 | Windows | Tier-2 CI e triage |
 
 ---
 
 ## Prossimo consigliato
 
-1. **P1-5** — `cargo-dist`, Homebrew tap, npm wrapper
-2. **P2-3** — `docs/adr/` per decisioni future
-3. **P1-4+** — linker gRPC/queue e client HTTP più ricchi
+1. **P2-4** — Windows tier-2 CI e triage
+2. **P1-4+** — linker gRPC/queue e client HTTP più ricchi
+3. **Prima release** — creare tap `homebrew-repoctx` e tag `v0.1.0`
 
 ---
 

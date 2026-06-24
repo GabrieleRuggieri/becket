@@ -293,11 +293,37 @@ The tool is successful if:
 ### Build from source
 
 ```bash
-git clone <repo-url>
-cd repoctx
+git clone https://github.com/GabrieleRuggieri/repo-ctx.git
+cd repo-ctx
 cargo build --release
 ./target/release/repoctx build
 ```
+
+### Install (prebuilt)
+
+**Homebrew** (after tap is published):
+
+```bash
+brew tap GabrieleRuggieri/repoctx
+brew install repoctx
+```
+
+**npm** (downloads native binary from GitHub Releases):
+
+```bash
+npx repoctx build
+```
+
+**Cargo** (builds from source):
+
+```bash
+cargo install repoctx-cli --locked
+cargo install repoctx-mcp --locked
+```
+
+**GitHub Releases**: download the archive for your platform from [Releases](https://github.com/GabrieleRuggieri/repo-ctx/releases), or use the shell installer attached to each release.
+
+See [packaging/README.md](./packaging/README.md) for maintainers cutting a new version.
 
 ### MCP server (AI agents)
 

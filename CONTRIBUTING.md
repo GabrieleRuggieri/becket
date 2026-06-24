@@ -139,6 +139,21 @@ cargo test -p repoctx-schema write_schemas -- --ignored --nocapture
 
 CI verifies committed schemas match generated output.
 
+## Release workflow
+
+Maintainers use [cargo-dist](https://axodotdev.github.io/cargo-dist/) — see [packaging/README.md](./packaging/README.md):
+
+```bash
+# bump [workspace.package].version, then:
+git tag v0.1.0 && git push --tags
+```
+
+CI in `.github/workflows/release.yml` builds binaries and publishes npm/Homebrew artifacts.
+
+## Architecture decisions
+
+Significant design choices are recorded in [docs/adr/](./docs/adr/README.md).
+
 ## Questions
 
-Open a [GitHub issue](https://github.com/GabrieleRuggieri/repo-ctx/issues) for design questions before large refactors. For architecture decisions, prefer short ADRs under `docs/adr/` (see BACKLOG P2-3).
+Open a [GitHub issue](https://github.com/GabrieleRuggieri/repo-ctx/issues) for design questions before large refactors. For new architecture decisions, add an ADR under `docs/adr/`.

@@ -297,3 +297,20 @@
 
 - 57 test passano (`REPOCTX_HASH_EMBED=1`)
 - `cargo clippy --all-features` pulito
+
+---
+
+## 2026-06-23 — Sessione 16: distribuzione + ADR (branch `feature/distribution-adr`)
+
+### Completato
+
+- **P1-5 cargo-dist**: `dist-workspace.toml`, `[profile.dist]`, `.github/workflows/release.yml`
+- Installer **shell**, **npm** (`repoctx`, `repoctx-mcp`), **Homebrew** (tap `GabrieleRuggieri/homebrew-repoctx`)
+- `packaging/README.md` con workflow release
+- **P2-3 ADR**: `docs/adr/` ADR 0001–0005 + indice
+- README: sezione install (brew / npm / cargo / releases)
+
+### Verificato
+
+- `dist plan` elenca artifact per 5 target × 2 binari
+- `cargo test --all` invariato
