@@ -317,6 +317,16 @@ cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
 ```
 
+### Git hooks (rustfmt pre-commit)
+
+Setup una tantum (formatta automaticamente prima di ogni commit):
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+Il gate CI `cargo fmt --check` resta attivo come rete di sicurezza.
+
 ### Documentation map
 
 | Document | Purpose |

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Formats Rust sources before each commit so CI `cargo fmt --check` stays green.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+staged_rs="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.rs$' || true)"
+if [[ -z "$staged_rs" ]]; then
+  exit 0
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "pre-commit: cargo non trovato nel PATH" >&2
+  exit 1
+fi
+
+cargo fmt --all
+
+while IFS= read -r file; do
+  if [[ -f "$file" ]]; then
+    git add "$file"
+  fi
+done < <(git diff --name-only | grep -E '\.rs$' || true)

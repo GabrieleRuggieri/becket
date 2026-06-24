@@ -123,3 +123,13 @@
 
 - Rigenerare schemi: `cargo test -p repoctx-schema write_schemas -- --ignored --nocapture`
 - Prossimo step consigliato: P0-7 `domain rename` / `domain add`
+
+---
+
+## 2026-06-23 — Hook pre-commit rustfmt (branch `chore/git-pre-commit-hook`)
+
+### Completato
+
+- **`.githooks/pre-commit`**: `cargo fmt --all` su file `.rs` in stage, re-stage automatico
+- **`scripts/setup-git-hooks.sh`**: `git config core.hooksPath .githooks`
+- README: sezione setup hook
