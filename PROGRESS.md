@@ -170,3 +170,26 @@
 
 - 30 test totali passano (`cargo test --all`)
 - `cargo clippy` pulito
+
+---
+
+## 2026-06-23 — Sessione 9: HTTP entrypoints (branch `feature/http-entrypoints`)
+
+### Completato
+
+- **`parse/http_routes.rs`**: euristiche per route HTTP
+  - Express/Fastify/Axum: `app.get('/path', handler)`, `.route(...)`
+  - Flask/FastAPI: `@app.get("/path")` su `decorated_definition`
+  - Spring: `@GetMapping`, `@PostMapping`, ecc. su `method_declaration`
+- **Build pipeline**: `index_entrypoints` risolve handler → simbolo, emette `EntrypointKind::Http`
+- Fixture `tests/fixtures/http-routes/` (TS + Python + Java)
+- Unit test parser + integration test build
+
+### Verificato
+
+- 32 test totali passano (`cargo test --all`)
+- `cargo clippy` pulito
+
+### Note
+
+- P0 MVP core completo — prossimo step: P1-2 MCP sampling o P1-6 benchmark

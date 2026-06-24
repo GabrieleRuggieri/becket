@@ -306,3 +306,29 @@ fn build_inheritance_fixture_resolves_extends_and_implements() {
     assert!(deps.contains("\"extends\""));
     assert!(deps.contains("\"implements\""));
 }
+
+#[test]
+fn build_http_routes_fixture_detects_express_flask_and_spring() {
+    let work = isolated_fixture("http-routes");
+    let report = BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("build");
+
+    assert!(
+        report.entrypoints_indexed >= 4,
+        "expected HTTP routes from TS, Python, and Java fixtures"
+    );
+
+    let entrypoints =
+        fs::read_to_string(work.root.join(".repoctx/entrypoints.json")).expect("entrypoints");
+    assert!(entrypoints.contains("\"http\""));
+    assert!(entrypoints.contains("GET /users"));
+    assert!(entrypoints.contains("GET /health"));
+    assert!(entrypoints.contains("GET /items"));
+}

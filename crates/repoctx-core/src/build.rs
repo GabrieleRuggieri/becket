@@ -135,7 +135,7 @@ impl BuildPipeline {
         }
 
         store.clear_entrypoints()?;
-        let entrypoints_indexed = self.index_entrypoints(&store, &all_symbols)?;
+        let entrypoints_indexed = self.index_entrypoints(&store, &all_symbols, &parse_cache)?;
 
         let call_edges: Vec<CallEdge> = edges
             .iter()
@@ -261,23 +261,54 @@ impl BuildPipeline {
         remapped
     }
 
-    /// Indexes `main` functions as program entrypoints.
+    /// Indexes program and HTTP entrypoints from parse results.
     fn index_entrypoints(
         &self,
         store: &IndexStore,
         symbols: &[repoctx_schema::artifacts::SymbolRecord],
+        parse_cache: &HashMap<String, FileParseResult>,
     ) -> Result<usize, CoreError> {
         let mut count = 0usize;
-        for symbol in symbols {
-            if symbol.name == "main" {
+        let mut seen = std::collections::HashSet::new();
+
+        for parsed in parse_cache.values() {
+            for route in &parsed.http_routes {
+                let Some(handler) = symbols
+                    .iter()
+                    .find(|s| s.file_path == route.file_path && s.name == route.handler_name)
+                else {
+                    continue;
+                };
+                let dedupe = format!("{}:{}", handler.id, route.label);
+                if !seen.insert(dedupe) {
+                    continue;
+                }
+                let kind_key = format!("http:{}", route.label);
                 store.insert_entrypoint(&EntrypointRecord {
-                    id: stable_entrypoint_id(&symbol.id, "main"),
-                    symbol_id: symbol.id.clone(),
-                    kind: EntrypointKind::Main,
-                    label: Some(symbol.file_path.clone()),
+                    id: stable_entrypoint_id(&handler.id, &kind_key),
+                    symbol_id: handler.id.clone(),
+                    kind: EntrypointKind::Http,
+                    label: Some(route.label.clone()),
                 })?;
                 count += 1;
             }
+        }
+
+        for symbol in symbols {
+            if symbol.name != "main" {
+                continue;
+            }
+            let dedupe = format!("{}:main", symbol.id);
+            if !seen.insert(dedupe) {
+                continue;
+            }
+            store.insert_entrypoint(&EntrypointRecord {
+                id: stable_entrypoint_id(&symbol.id, "main"),
+                symbol_id: symbol.id.clone(),
+                kind: EntrypointKind::Main,
+                label: Some(symbol.file_path.clone()),
+            })?;
+            count += 1;
         }
         Ok(count)
     }

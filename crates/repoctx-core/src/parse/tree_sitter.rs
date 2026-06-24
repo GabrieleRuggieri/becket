@@ -10,6 +10,7 @@ use tree_sitter::{Language, Node, Parser};
 use crate::error::CoreError;
 use crate::ids::stable_symbol_id;
 use crate::language::Language as RepoLanguage;
+use crate::parse::http_routes::{self, ParsedHttpRoute};
 
 /// A single unresolved call edge (resolved to symbol ids in the graph builder).
 #[derive(Debug, Clone)]
@@ -27,6 +28,8 @@ pub struct ParsedEntrypoint {
     pub symbol_id: String,
     /// Entrypoint classification.
     pub kind: EntrypointKind,
+    /// Optional label (route path, file path, etc.).
+    pub label: Option<String>,
 }
 
 /// An unresolved import edge (file-level, resolved in the graph builder).
@@ -62,6 +65,8 @@ pub struct FileParseResult {
     pub imports: Vec<ParsedImport>,
     /// Unresolved extends/implements edges.
     pub inheritance: Vec<ParsedInheritance>,
+    /// HTTP route entrypoints (resolved to symbols at index time).
+    pub http_routes: Vec<ParsedHttpRoute>,
     /// Detected entrypoints.
     pub entrypoints: Vec<ParsedEntrypoint>,
 }
@@ -109,6 +114,7 @@ impl TreeSitterParser {
             calls: ctx.calls,
             imports: ctx.imports,
             inheritance: ctx.inheritance,
+            http_routes: ctx.http_routes,
             entrypoints: ctx.entrypoints,
         })
     }
@@ -120,6 +126,7 @@ struct ParseContext {
     calls: Vec<ParsedCall>,
     imports: Vec<ParsedImport>,
     inheritance: Vec<ParsedInheritance>,
+    http_routes: Vec<ParsedHttpRoute>,
     entrypoints: Vec<ParsedEntrypoint>,
     scope_stack: Vec<String>,
 }
@@ -132,6 +139,7 @@ impl ParseContext {
             calls: Vec::new(),
             imports: Vec::new(),
             inheritance: Vec::new(),
+            http_routes: Vec::new(),
             entrypoints: Vec::new(),
             scope_stack: Vec::new(),
         }
@@ -158,6 +166,7 @@ impl ParseContext {
             self.entrypoints.push(ParsedEntrypoint {
                 symbol_id: id.clone(),
                 kind: EntrypointKind::Main,
+                label: Some(self.file_path.clone()),
             });
         }
 
@@ -207,6 +216,14 @@ fn walk_node(node: Node, source: &[u8], ctx: &mut ParseContext) {
                 return;
             }
         }
+        "decorated_definition" => {
+            if let Some(route) = http_routes::detect_decorated_handler(node, source, &ctx.file_path)
+            {
+                ctx.http_routes.push(route);
+            }
+            walk_children(node, source, ctx);
+            return;
+        }
         "struct_item" | "class_definition" | "class_declaration" => {
             if let Some(name) = node_child_identifier(node, source, &["name", "declarator"]) {
                 let id = ctx.push_symbol(&name, SymbolKind::Class, node, Visibility::Public);
@@ -227,6 +244,11 @@ fn walk_node(node: Node, source: &[u8], ctx: &mut ParseContext) {
         "method_declaration" => {
             if let Some(name) = node_child_identifier(node, source, &["name"]) {
                 let id = ctx.push_symbol(&name, SymbolKind::Method, node, Visibility::Public);
+                if let Some(route) =
+                    http_routes::detect_java_http_mapping(node, source, &ctx.file_path, &name)
+                {
+                    ctx.http_routes.push(route);
+                }
                 ctx.scope_stack.push(id);
                 walk_children(node, source, ctx);
                 ctx.scope_stack.pop();
@@ -235,6 +257,9 @@ fn walk_node(node: Node, source: &[u8], ctx: &mut ParseContext) {
         }
         // Calls (multi-language)
         "call_expression" | "call" => {
+            if let Some(route) = http_routes::detect_route_call(node, source, &ctx.file_path) {
+                ctx.http_routes.push(route);
+            }
             if let Some(name) = extract_call_name(node, source) {
                 ctx.record_call(&name);
             }

@@ -10,7 +10,7 @@
 |---|---|---|---|
 | P0-1 | Parsing | Integrare **tree-sitter** per Rust, TS/JS, Python, Go, Java | ✅ merge su `main` |
 | P0-2 | Graph | **Resolver** import/call/extends → popolare tabella `edges` | ✅ call + import + extends/implements |
-| P0-3 | Graph | **Entrypoint detector** (main, HTTP route heuristics) | ✅ `main` v0; HTTP TODO |
+| P0-3 | Graph | **Entrypoint detector** (main, HTTP route heuristics) | ✅ main + HTTP (Express, Flask, Spring) |
 | P0-4 | Flow | **Flow reconstructor** base (clustering call graph + nomi cartelle) | ✅ v0 auto-discovery path |
 | P0-5 | MCP | Server **rmcp** con `get_context`, `get_impact`, `get_flow`, `get_dependencies` | ✅ branch `feature/mcp-server` |
 | P0-6 | Schema | File **JSON Schema** in `schemas/` + validazione in CI | ✅ schemars + jsonschema |
@@ -43,9 +43,9 @@
 
 ## Prossimo consigliato
 
-1. **P0-3** — entrypoint HTTP route heuristics
-2. **P1-2** — MCP sampling per enrichment lazy
-3. **P1-6** — benchmark fixture + budget CI
+1. **P1-2** — MCP sampling per enrichment lazy
+2. **P1-6** — benchmark fixture + budget CI
+3. **P1-1** — embeddings ONNX + sqlite-vec
 
 ---
 
