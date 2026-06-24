@@ -123,3 +123,21 @@
 
 - Rigenerare schemi: `cargo test -p repoctx-schema write_schemas -- --ignored --nocapture`
 - Prossimo step consigliato: P0-7 `domain rename` / `domain add`
+
+---
+
+## 2026-06-23 — Sessione 6: domain CLI (branch `feature/domain-cli`)
+
+### Completato
+
+- **`repoctx domain rename`**: rinomina flow per id/nome, persiste in `domains` + `flows`
+- **`repoctx domain add`**: allega path (`src/foo/**`) o simboli, ricostruisce il flow
+- **Tabella `domain_members`** + override al rebuild (`apply_domain_overrides`)
+- **`clear_all`** non cancella più i domini utente
+- Integration test: rename sopravvive a rebuild, domain add con path/symboli
+- Fixture test isolate in tempdir (no race su `.repoctx/`)
+
+### Verificato
+
+- 27 test totali passano
+- `cargo clippy` pulito

@@ -42,16 +42,38 @@ impl FlowReconstructor {
         symbols: &[SymbolRecord],
         edges: &[CallEdge],
     ) -> Option<FlowRecord> {
-        let domain_symbols: Vec<&SymbolRecord> = symbols
+        let domain_ids: HashSet<String> = symbols
             .iter()
             .filter(|s| path_matches_domain(&s.file_path, domain))
+            .map(|s| s.id.clone())
+            .collect();
+        Self::build_flow_for_symbol_set(
+            &stable_flow_id(domain),
+            domain,
+            &domain_ids,
+            symbols,
+            edges,
+        )
+    }
+
+    /// Builds a flow from an explicit symbol set (used by `domain add`).
+    pub fn build_flow_for_symbol_set(
+        flow_id: &str,
+        name: &str,
+        domain_ids: &HashSet<String>,
+        symbols: &[SymbolRecord],
+        edges: &[CallEdge],
+    ) -> Option<FlowRecord> {
+        let domain_symbols: Vec<&SymbolRecord> = symbols
+            .iter()
+            .filter(|s| domain_ids.contains(&s.id))
             .collect();
 
         if domain_symbols.len() < 2 {
             return None;
         }
 
-        let domain_ids: HashSet<&str> = domain_symbols.iter().map(|s| s.id.as_str()).collect();
+        let allowed: HashSet<&str> = domain_symbols.iter().map(|s| s.id.as_str()).collect();
 
         let root = domain_symbols
             .iter()
@@ -70,7 +92,7 @@ impl FlowReconstructor {
             })?;
 
         let adjacency = build_adjacency(edges);
-        let ordered_ids = bfs_order(root.id.as_str(), &adjacency, &domain_ids);
+        let ordered_ids = bfs_order(root.id.as_str(), &adjacency, &allowed);
 
         let steps: Vec<FlowStepRecord> = ordered_ids
             .into_iter()
@@ -87,13 +109,51 @@ impl FlowReconstructor {
         }
 
         Some(FlowRecord {
-            id: stable_flow_id(domain),
-            name: domain.to_string(),
-            description: Some(format!(
-                "Auto-discovered flow from folder segment '{domain}'"
-            )),
+            id: flow_id.to_string(),
+            name: name.to_string(),
+            description: Some(format!("Flow for domain '{name}'")),
             steps,
         })
+    }
+
+    /// Resolves domain members to symbol ids.
+    pub fn symbols_for_members(
+        members: &[(String, String)],
+        symbols: &[SymbolRecord],
+    ) -> HashSet<String> {
+        let mut ids = HashSet::new();
+        for (kind, value) in members {
+            match kind.as_str() {
+                "path" => {
+                    for symbol in symbols {
+                        if path_matches_pattern(&symbol.file_path, value) {
+                            ids.insert(symbol.id.clone());
+                        }
+                    }
+                }
+                "symbol" => {
+                    for symbol in symbols {
+                        if symbol.name == *value {
+                            ids.insert(symbol.id.clone());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        ids
+    }
+
+    /// Builds a flow from stored domain members.
+    pub fn build_flow_for_members(
+        flow_id: &str,
+        name: &str,
+        members: &[(String, String)],
+        symbols: &[SymbolRecord],
+        edges: &[CallEdge],
+    ) -> Option<FlowRecord> {
+        let domain_ids = Self::symbols_for_members(members, symbols);
+        Self::build_flow_for_symbol_set(flow_id, name, &domain_ids, symbols, edges)
     }
 }
 
@@ -130,6 +190,19 @@ fn path_matches_domain(file_path: &str, domain: &str) -> bool {
     file_path
         .split('/')
         .any(|segment| segment.eq_ignore_ascii_case(domain))
+}
+
+fn path_matches_pattern(file_path: &str, pattern: &str) -> bool {
+    let pattern = pattern.trim();
+    if pattern.ends_with("/**") {
+        let prefix = pattern.trim_end_matches("/**");
+        return file_path == prefix || file_path.starts_with(&format!("{prefix}/"));
+    }
+    if pattern.contains('*') {
+        let prefix = pattern.split('*').next().unwrap_or(pattern);
+        return file_path.starts_with(prefix);
+    }
+    file_path == pattern || file_path.starts_with(&format!("{pattern}/"))
 }
 
 fn build_adjacency(edges: &[CallEdge]) -> HashMap<&str, Vec<&str>> {

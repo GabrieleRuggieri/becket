@@ -24,4 +24,8 @@ pub enum CoreError {
     /// Tree-sitter parse failure.
     #[error("parse error: {0}")]
     Parse(String),
+
+    /// Domain refinement error.
+    #[error("domain error: {0}")]
+    Domain(String),
 }

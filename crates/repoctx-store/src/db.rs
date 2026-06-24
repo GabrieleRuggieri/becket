@@ -12,6 +12,9 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::error::StoreError;
 
+/// User-refined domain: `(flow_id, display_name, members)`.
+pub type DomainOverride = (String, String, Vec<(String, String)>);
+
 /// Embedded SQLite index for symbols, edges, flows, and file hashes.
 pub struct IndexStore {
     conn: Connection,
@@ -111,6 +114,13 @@ impl IndexStore {
                 user_confirmed  INTEGER NOT NULL DEFAULT 0
             );
 
+            CREATE TABLE IF NOT EXISTS domain_members (
+                domain_id     TEXT NOT NULL REFERENCES domains(id) ON DELETE CASCADE,
+                member_kind   TEXT NOT NULL,
+                member_value  TEXT NOT NULL,
+                PRIMARY KEY (domain_id, member_kind, member_value)
+            );
+
             CREATE TABLE IF NOT EXISTS meta (
                 key   TEXT PRIMARY KEY,
                 value TEXT NOT NULL
@@ -120,11 +130,7 @@ impl IndexStore {
         Ok(())
     }
 
-    /// Clears all indexed data while keeping the schema.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`StoreError::Database`] on SQLite failure.
+    /// Clears indexed code data while preserving user domain refinements.
     pub fn clear_all(&self) -> Result<(), StoreError> {
         self.conn.execute_batch(
             "
@@ -135,9 +141,15 @@ impl IndexStore {
             DELETE FROM symbols;
             DELETE FROM modules;
             DELETE FROM files;
-            DELETE FROM domains;
             ",
         )?;
+        Ok(())
+    }
+
+    /// Clears user domain overrides (for tests or full reset).
+    pub fn clear_domains(&self) -> Result<(), StoreError> {
+        self.conn
+            .execute_batch("DELETE FROM domain_members; DELETE FROM domains;")?;
         Ok(())
     }
 
@@ -415,6 +427,170 @@ impl IndexStore {
             ids.push(row?);
         }
         Ok(ids)
+    }
+
+    /// Finds a flow by exact id or case-insensitive name.
+    pub fn find_flow_id(&self, key: &str) -> Result<Option<String>, StoreError> {
+        let by_id: Option<String> = self
+            .conn
+            .query_row("SELECT id FROM flows WHERE id = ?1", params![key], |row| {
+                row.get(0)
+            })
+            .optional()?;
+        if by_id.is_some() {
+            return Ok(by_id);
+        }
+        self.conn
+            .query_row(
+                "SELECT id FROM flows WHERE lower(name) = lower(?1) LIMIT 1",
+                params![key],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(StoreError::from)
+    }
+
+    /// Returns true if another flow already uses `name`.
+    pub fn flow_name_taken(&self, name: &str, except_id: Option<&str>) -> Result<bool, StoreError> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM flows WHERE lower(name) = lower(?1) AND (?2 IS NULL OR id != ?2)",
+            params![name, except_id],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
+    /// Updates the display name of a flow.
+    pub fn update_flow_name(&self, flow_id: &str, name: &str) -> Result<(), StoreError> {
+        let updated = self.conn.execute(
+            "UPDATE flows SET name = ?1 WHERE id = ?2",
+            params![name, flow_id],
+        )?;
+        if updated == 0 {
+            return Err(StoreError::NotFound(format!("flow '{flow_id}'")));
+        }
+        Ok(())
+    }
+
+    /// Inserts or updates a domain record.
+    pub fn upsert_domain(
+        &self,
+        id: &str,
+        name: &str,
+        source: &str,
+        user_confirmed: bool,
+    ) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO domains (id, name, source, user_confirmed)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                source = excluded.source,
+                user_confirmed = excluded.user_confirmed",
+            params![id, name, source, i64::from(user_confirmed)],
+        )?;
+        Ok(())
+    }
+
+    /// Syncs deterministic domain rows from auto-discovered flows without overwriting user edits.
+    pub fn sync_domains_from_flows(&self, flows: &[FlowRecord]) -> Result<(), StoreError> {
+        for flow in flows {
+            let confirmed: i64 = self
+                .conn
+                .query_row(
+                    "SELECT user_confirmed FROM domains WHERE id = ?1",
+                    params![flow.id],
+                    |row| row.get(0),
+                )
+                .optional()?
+                .unwrap_or(0);
+            if confirmed == 0 {
+                self.upsert_domain(&flow.id, &flow.name, "deterministic", false)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Loads user-refined domains and their members for build-time overrides.
+    pub fn load_user_domain_overrides(&self) -> Result<Vec<DomainOverride>, StoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name FROM domains WHERE user_confirmed = 1")?;
+        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get(1)?)))?;
+        let mut overrides = Vec::new();
+        for row in rows {
+            let (id, name) = row?;
+            let members = self.list_domain_members(&id)?;
+            overrides.push((id, name, members));
+        }
+        Ok(overrides)
+    }
+
+    /// Adds a path or symbol member to a domain.
+    pub fn add_domain_member(
+        &self,
+        domain_id: &str,
+        member_kind: &str,
+        member_value: &str,
+    ) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO domain_members (domain_id, member_kind, member_value)
+             VALUES (?1, ?2, ?3)",
+            params![domain_id, member_kind, member_value],
+        )?;
+        Ok(())
+    }
+
+    /// Lists members attached to a domain.
+    pub fn list_domain_members(
+        &self,
+        domain_id: &str,
+    ) -> Result<Vec<(String, String)>, StoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT member_kind, member_value FROM domain_members WHERE domain_id = ?1")?;
+        let rows = stmt
+            .query_map(params![domain_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Replaces flow steps for an existing flow.
+    pub fn replace_flow(&self, flow: &FlowRecord) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO flows (id, name, description) VALUES (?1, ?2, ?3)",
+            params![flow.id, flow.name, flow.description],
+        )?;
+        self.conn.execute(
+            "DELETE FROM flow_steps WHERE flow_id = ?1",
+            params![flow.id],
+        )?;
+        for step in &flow.steps {
+            self.conn.execute(
+                "INSERT INTO flow_steps (id, flow_id, step_order, symbol_id, external_system)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    format!("{}:{}", flow.id, step.order),
+                    flow.id,
+                    step.order,
+                    step.symbol_id,
+                    step.external_system,
+                ],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Writes all JSON artifacts from the current index state.
+    pub fn write_artifacts(&self, paths: &crate::paths::RepoCtxPaths) -> Result<(), StoreError> {
+        let writer = crate::artifacts::ArtifactWriter::new(paths.clone());
+        let (symbols, dependencies, flows, entrypoints, architecture) = self.export_artifacts()?;
+        writer.write_artifact("symbols", &symbols)?;
+        writer.write_artifact("dependencies", &dependencies)?;
+        writer.write_artifact("flows", &flows)?;
+        writer.write_artifact("entrypoints", &entrypoints)?;
+        writer.write_artifact("architecture", &architecture)?;
+        Ok(())
     }
 
     /// Finds a flow by exact or partial name match.

@@ -5,6 +5,7 @@
 //! the `repoctx build` pipeline.
 
 pub mod build;
+pub mod domain;
 pub mod error;
 pub mod extract;
 pub mod flow;
@@ -20,4 +21,5 @@ pub use ids::{
 };
 
 pub use build::{BuildOptions, BuildPipeline, BuildReport};
+pub use domain::DomainEditor;
 pub use error::CoreError;

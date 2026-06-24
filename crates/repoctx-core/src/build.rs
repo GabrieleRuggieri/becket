@@ -9,6 +9,7 @@ use repoctx_schema::symbol::EntrypointKind;
 use repoctx_store::{ArtifactWriter, IndexStore, RepoCtxPaths};
 use tracing::info;
 
+use crate::domain::apply_domain_overrides;
 use crate::error::CoreError;
 use crate::flow::{CallEdge, FlowReconstructor};
 use crate::graph::GraphResolver;
@@ -142,11 +143,18 @@ impl BuildPipeline {
                 dst: e.dst_symbol_id.clone(),
             })
             .collect();
-        let discovered_flows = FlowReconstructor::reconstruct(&all_symbols, &call_edges);
+        let discovered_flows = {
+            let mut flows = FlowReconstructor::reconstruct(&all_symbols, &call_edges);
+            let overrides = store.load_user_domain_overrides()?;
+            apply_domain_overrides(&mut flows, &overrides, &all_symbols, &call_edges);
+            flows.sort_by(|a, b| a.name.cmp(&b.name));
+            flows
+        };
         store.clear_flows()?;
         for flow in &discovered_flows {
             store.insert_flow(flow)?;
         }
+        store.sync_domains_from_flows(&discovered_flows)?;
         let flows_indexed = discovered_flows.len();
 
         let writer = ArtifactWriter::new(self.paths.clone());

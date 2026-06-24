@@ -14,7 +14,7 @@
 | P0-4 | Flow | **Flow reconstructor** base (clustering call graph + nomi cartelle) | ✅ v0 auto-discovery path |
 | P0-5 | MCP | Server **rmcp** con `get_context`, `get_impact`, `get_flow`, `get_dependencies` | ✅ branch `feature/mcp-server` |
 | P0-6 | Schema | File **JSON Schema** in `schemas/` + validazione in CI | ✅ schemars + jsonschema |
-| P0-7 | CLI | Comandi `domain rename` / `domain add` | Persistenza in store |
+| P0-7 | CLI | Comandi `domain rename` / `domain add` | ✅ persistenza store + override build |
 | P0-8 | Incremental | Fix re-index: eliminare simboli stale quando un file cambia | ✅ `delete_symbols_for_path` |
 | P0-9 | Determinism | ID stabili + artifact byte-identici tra rebuild | ✅ SHA-256 ids + test CI |
 
@@ -44,9 +44,9 @@
 ## Prossimo consigliato
 
 1. **P0-2** — edge `extends` / `implements` (tree-sitter)
-2. **P0-7** — comandi `domain rename` / `domain add`
-3. **P0-3** — entrypoint HTTP route heuristics
-4. **P1-2** — MCP sampling per enrichment lazy
+2. **P0-3** — entrypoint HTTP route heuristics
+3. **P1-2** — MCP sampling per enrichment lazy
+4. **chore** — merge hook pre-commit (`chore/git-pre-commit-hook`)
 
 ---
 

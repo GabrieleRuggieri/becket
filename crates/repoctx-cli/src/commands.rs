@@ -1,7 +1,7 @@
 //! CLI command handlers delegating to core and query crates.
 
-use anyhow::{bail, Result};
-use repoctx_core::{BuildOptions, BuildPipeline};
+use anyhow::Result;
+use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor};
 use repoctx_query::QueryEngine;
 use serde::Serialize;
 
@@ -92,10 +92,19 @@ pub fn execute(cli: Cli) -> Result<()> {
         }
         Commands::Domain { action } => match action {
             DomainAction::Rename { auto_id, name } => {
-                bail!("domain rename ({auto_id} → {name}) not yet implemented");
+                let editor = DomainEditor::new(&cli.repo);
+                let flow = editor.rename(&auto_id, &name)?;
+                println!("renamed domain → {} ({})", flow.name, flow.id);
             }
             DomainAction::Add { name, targets } => {
-                bail!("domain add ({name}: {targets:?}) not yet implemented");
+                let editor = DomainEditor::new(&cli.repo);
+                let flow = editor.add(&name, &targets)?;
+                println!(
+                    "updated domain {} ({} steps, id {})",
+                    flow.name,
+                    flow.steps.len(),
+                    flow.id
+                );
             }
         },
     }

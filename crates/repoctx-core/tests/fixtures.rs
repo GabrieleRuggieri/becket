@@ -4,14 +4,49 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use repoctx_core::{BuildOptions, BuildPipeline};
+use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor};
 use repoctx_query::QueryEngine;
 use repoctx_schema::{validate_artifact_json, ARTIFACT_NAMES};
+use tempfile::TempDir;
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/fixtures")
         .join(name)
+}
+
+/// Isolated copy of a fixture so parallel tests do not share `.repoctx/`.
+struct FixtureWorkdir {
+    _temp: TempDir,
+    root: PathBuf,
+}
+
+fn isolated_fixture(name: &str) -> FixtureWorkdir {
+    let src = fixture_path(name);
+    let temp = tempfile::tempdir().expect("tempdir");
+    copy_dir_all(&src, temp.path()).expect("copy fixture");
+    let repoctx = temp.path().join(".repoctx");
+    if repoctx.exists() {
+        fs::remove_dir_all(&repoctx).expect("remove stale .repoctx");
+    }
+    FixtureWorkdir {
+        root: temp.path().to_path_buf(),
+        _temp: temp,
+    }
+}
+
+fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let target = dst.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_all(&entry.path(), &target)?;
+        } else {
+            fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
 }
 
 fn read_artifacts(root: &Path) -> HashMap<String, String> {
@@ -53,9 +88,9 @@ fn build_outputs_validate_against_json_schema() {
         "tiny-python",
         "flows-payment",
     ] {
-        let root = fixture_path(fixture);
+        let work = isolated_fixture(fixture);
         BuildPipeline::new(
-            &root,
+            &work.root,
             BuildOptions {
                 incremental: false,
                 no_embeddings: true,
@@ -63,27 +98,27 @@ fn build_outputs_validate_against_json_schema() {
         )
         .run()
         .unwrap_or_else(|e| panic!("build {fixture}: {e}"));
-        validate_artifacts(&root);
+        validate_artifacts(&work.root);
     }
 }
 
 #[test]
 fn rebuild_produces_byte_identical_artifacts() {
-    let root = fixture_path("monorepo-edges");
+    let work = isolated_fixture("monorepo-edges");
     let options = BuildOptions {
         incremental: false,
         no_embeddings: true,
     };
 
-    BuildPipeline::new(&root, options.clone())
+    BuildPipeline::new(&work.root, options.clone())
         .run()
         .expect("first build");
-    let first = read_artifacts(&root);
+    let first = read_artifacts(&work.root);
 
-    BuildPipeline::new(&root, options)
+    BuildPipeline::new(&work.root, options)
         .run()
         .expect("second build");
-    let second = read_artifacts(&root);
+    let second = read_artifacts(&work.root);
 
     assert_eq!(
         first, second,
@@ -93,9 +128,9 @@ fn rebuild_produces_byte_identical_artifacts() {
 
 #[test]
 fn build_monorepo_edges_resolves_call_chain() {
-    let root = fixture_path("monorepo-edges");
+    let work = isolated_fixture("monorepo-edges");
     let report = BuildPipeline::new(
-        &root,
+        &work.root,
         BuildOptions {
             incremental: false,
             no_embeddings: true,
@@ -107,7 +142,7 @@ fn build_monorepo_edges_resolves_call_chain() {
     assert!(report.symbols_indexed >= 3);
     assert!(report.edges_indexed >= 2, "expected a->b->c edges");
 
-    let engine = QueryEngine::new(&root);
+    let engine = QueryEngine::new(&work.root);
     let impact = engine.impact("func_a", 3).expect("impact query");
     assert!(
         impact.affected_symbol_ids.len() >= 2,
@@ -117,9 +152,9 @@ fn build_monorepo_edges_resolves_call_chain() {
 
 #[test]
 fn build_tiny_rust_indexes_symbols() {
-    let root = fixture_path("tiny-rust");
+    let work = isolated_fixture("tiny-rust");
     let report = BuildPipeline::new(
-        &root,
+        &work.root,
         BuildOptions {
             incremental: false,
             no_embeddings: true,
@@ -130,16 +165,16 @@ fn build_tiny_rust_indexes_symbols() {
 
     assert!(report.symbols_indexed >= 2);
 
-    let engine = QueryEngine::new(&root);
+    let engine = QueryEngine::new(&work.root);
     let ctx = engine.context("Greeter", None).expect("context query");
     assert_eq!(ctx.symbol.name, "Greeter");
 }
 
 #[test]
 fn build_tiny_python_detects_main_entrypoint() {
-    let root = fixture_path("tiny-python");
+    let work = isolated_fixture("tiny-python");
     let report = BuildPipeline::new(
-        &root,
+        &work.root,
         BuildOptions {
             incremental: false,
             no_embeddings: true,
@@ -153,9 +188,9 @@ fn build_tiny_python_detects_main_entrypoint() {
 
 #[test]
 fn build_flows_payment_discovers_flow() {
-    let root = fixture_path("flows-payment");
+    let work = isolated_fixture("flows-payment");
     let report = BuildPipeline::new(
-        &root,
+        &work.root,
         BuildOptions {
             incremental: false,
             no_embeddings: true,
@@ -166,9 +201,85 @@ fn build_flows_payment_discovers_flow() {
 
     assert!(report.flows_indexed >= 1);
 
-    let engine = QueryEngine::new(&root);
+    let engine = QueryEngine::new(&work.root);
     let flow = engine.flow("payment").expect("flow query");
     assert!(flow.flow.is_some(), "payment flow should exist");
     let flow = flow.flow.unwrap();
+    assert!(flow.steps.len() >= 2);
+}
+
+#[test]
+fn domain_rename_persists_and_survives_rebuild() {
+    let work = isolated_fixture("flows-payment");
+    BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("build");
+
+    let engine = QueryEngine::new(&work.root);
+    let before = engine.flow("payment").expect("flow").flow.expect("payment");
+    let flow_id = before.id.clone();
+
+    let editor = DomainEditor::new(&work.root);
+    editor
+        .rename(&flow_id, "billing")
+        .expect("rename should succeed");
+
+    let after = engine
+        .flow("billing")
+        .expect("query")
+        .flow
+        .expect("billing");
+    assert_eq!(after.name, "billing");
+
+    BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("rebuild");
+
+    let rebuilt = engine
+        .flow("billing")
+        .expect("query")
+        .flow
+        .expect("billing");
+    assert_eq!(rebuilt.name, "billing");
+}
+
+#[test]
+fn domain_add_attaches_symbols_and_rebuilds_flow() {
+    let work = isolated_fixture("flows-payment");
+    BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("build");
+
+    let editor = DomainEditor::new(&work.root);
+    let flow = editor
+        .add(
+            "checkout-flow",
+            &[
+                "src/payment/**".to_string(),
+                "checkout".to_string(),
+                "charge_card".to_string(),
+            ],
+        )
+        .expect("domain add");
+
+    assert_eq!(flow.name, "checkout-flow");
     assert!(flow.steps.len() >= 2);
 }
