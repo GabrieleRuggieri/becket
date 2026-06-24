@@ -119,7 +119,9 @@ fn warm_queries_p95_stays_within_budget() {
                 engine.impact("capture", 3).expect("impact");
             }
             1 => {
-                engine.context("register", None).expect("context");
+                engine
+                    .context("register", Some(6000), repoctx_query::ContextTask::Fix)
+                    .expect("context");
             }
             _ => {
                 engine.flow("payment").expect("flow");

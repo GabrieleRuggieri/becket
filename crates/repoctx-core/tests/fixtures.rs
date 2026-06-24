@@ -171,8 +171,41 @@ fn build_tiny_rust_indexes_symbols() {
     assert!(report.symbols_indexed >= 2);
 
     let engine = QueryEngine::new(&work.root);
-    let ctx = engine.context("Greeter", None).expect("context query");
+    let ctx = engine
+        .context("Greeter", Some(6000), repoctx_query::ContextTask::Fix)
+        .expect("context query");
     assert_eq!(ctx.symbol.name, "Greeter");
+    assert!(!ctx.snippets.is_empty() || ctx.markdown.contains("Greeter"));
+    assert!(ctx.markdown.contains("# Context: Greeter"));
+}
+
+#[test]
+fn context_assembly_includes_code_snippets() {
+    let work = isolated_fixture("flows-payment");
+    BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("build");
+
+    let engine = QueryEngine::new(&work.root);
+    let ctx = engine
+        .context("checkout", Some(8000), repoctx_query::ContextTask::Fix)
+        .expect("context");
+
+    assert!(!ctx.markdown.is_empty());
+    assert!(ctx.markdown.contains("## Code"));
+    assert!(!ctx.snippets.is_empty(), "expected real source snippets");
+    assert!(
+        ctx.snippets
+            .iter()
+            .any(|s| s.content.contains("fn") || s.content.contains("def")),
+        "snippet should contain source"
+    );
 }
 
 #[test]
@@ -357,7 +390,9 @@ fn build_with_embeddings_indexes_symbol_vectors() {
     );
 
     let engine = QueryEngine::new(&work.root);
-    let ctx = engine.context("capture", None).expect("context");
+    let ctx = engine
+        .context("capture", Some(6000), repoctx_query::ContextTask::Fix)
+        .expect("context");
     assert!(
         !ctx.semantic_neighbors.is_empty(),
         "payment-related symbols should cluster"

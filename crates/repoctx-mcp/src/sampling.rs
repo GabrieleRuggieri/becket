@@ -86,8 +86,10 @@ pub async fn apply_symbol_enrichment(
     mut context: ContextResult,
 ) -> ContextResult {
     if let Some(summary) = enrich_symbol_context(peer, repo_root, &context).await {
-        context.enriched_summary = Some(summary);
+        context.enriched_summary = Some(summary.clone());
         context.summary_source = SummarySource::McpSampling;
+        context.markdown.push_str("\n\n## Enriched summary\n\n");
+        context.markdown.push_str(&summary);
     }
     context
 }
@@ -191,6 +193,7 @@ fn extract_sampling_text(result: &CreateMessageResult) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use repoctx_query::types::{CodeSnippet, ContextTask};
     use repoctx_schema::artifacts::{FlowRecord, FlowStepRecord, SymbolRecord};
     use repoctx_schema::symbol::{SymbolKind, Visibility};
 
@@ -215,6 +218,21 @@ mod tests {
             external_dependencies: vec!["src".into()],
             invariants: vec!["visibility: Public".into()],
             semantic_neighbors: vec![],
+            snippets: vec![CodeSnippet {
+                symbol_id: "sym1".into(),
+                symbol_name: "pay".into(),
+                file_path: "src/payment.rs".into(),
+                start_line: 1,
+                end_line: 5,
+                language: "rust".into(),
+                content: "fn pay() {}".into(),
+            }],
+            callers: vec![],
+            callees: vec![],
+            affected_symbol_ids: vec![],
+            markdown: "# Context: pay".into(),
+            task: ContextTask::Fix,
+            budget_tokens: 6000,
         };
         let prompt = build_symbol_prompt(&context);
         assert!(prompt.contains("pay"));

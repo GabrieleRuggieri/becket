@@ -375,3 +375,19 @@
 ### Principio
 
 Documentazione allineata a **cosa funziona oggi** (impact, flow, MCP) e **north star v0.2** (un markdown bundle per task) — per massimizzare uso reale, non solo visione.
+
+---
+
+## 2026-06-25 — Sessione 20: Context Assembly (P1-11 / P1-11b)
+
+### Completato
+
+- **`repoctx-query::assemble`**: snippet reali da disco, callers/callees, impact, packing a budget token
+- **`ContextResult` esteso**: `snippets`, `markdown`, `task`, `budget_tokens`
+- **CLI** `repoctx context --budget 6000 --task fix` → output markdown (default), `--json` per tooling
+- **MCP `get_context`**: restituisce markdown bundle (non solo metadata JSON)
+- Test integrazione `context_assembly_includes_code_snippets` su fixture flows-payment
+
+### Prossimo step
+
+- P1-8 (wiki page model) → P1-9/P1-10 (wiki sync + lint)

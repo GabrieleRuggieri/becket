@@ -6,8 +6,11 @@ use repoctx_embed::{embed_with_model, symbol_embedding_text};
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_store::{IndexStore, RepoCtxPaths};
 
+use crate::assemble::assemble_context;
 use crate::error::QueryError;
-use crate::types::{ContextResult, DependenciesResult, FlowResult, ImpactResult, SummarySource};
+use crate::types::{
+    ContextResult, ContextTask, DependenciesResult, FlowResult, ImpactResult, SummarySource,
+};
 
 /// Read-only query surface over a built `.repoctx/` index.
 pub struct QueryEngine {
@@ -122,51 +125,26 @@ impl QueryEngine {
         })
     }
 
-    /// Builds a compact context bundle for LLM consumption.
+    /// Builds a context bundle with code snippets, impact, and markdown for LLM consumption.
     ///
     /// # Errors
     ///
     /// Returns [`QueryError`] when the index is missing or symbol is unknown.
-    pub fn context(&self, symbol: &str, _budget: Option<u32>) -> Result<ContextResult, QueryError> {
+    pub fn context(
+        &self,
+        symbol: &str,
+        budget: Option<u32>,
+        task: ContextTask,
+    ) -> Result<ContextResult, QueryError> {
         let store = self.open_store()?;
         let root = self.resolve_symbol(&store, symbol)?;
+        let mut result = assemble_context(&store, &self.paths.root, root, budget, task)?;
 
-        let all_symbols = store.load_symbols()?;
-        let related_components: Vec<String> = all_symbols
-            .iter()
-            .filter(|s| s.file_path == root.file_path && s.id != root.id)
-            .map(|s| s.name.clone())
-            .take(10)
-            .collect();
-
-        let responsibility = format!(
-            "{} ({:?}) defined in {} at lines {}-{}",
-            root.name, root.kind, root.file_path, root.start_line, root.end_line
-        );
-
-        let external_dependencies = root
-            .file_path
-            .split('/')
-            .take(2)
-            .map(str::to_string)
-            .collect();
-
-        let invariants = vec![format!("visibility: {:?}", root.visibility)];
-
-        let semantic_neighbors = self
-            .semantic_neighbor_names(&store, &root, 5)
+        result.semantic_neighbors = self
+            .semantic_neighbor_names(&store, &result.symbol, 5)
             .unwrap_or_default();
 
-        Ok(ContextResult {
-            symbol: root,
-            responsibility,
-            enriched_summary: None,
-            summary_source: SummarySource::Deterministic,
-            related_components,
-            external_dependencies,
-            invariants,
-            semantic_neighbors,
-        })
+        Ok(result)
     }
 
     fn semantic_neighbor_names(

@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use repoctx_query::ContextTask;
 use tracing_subscriber::EnvFilter;
 
 /// Local intelligence layer for codebases — build, query, and export AI-ready context.
@@ -61,13 +62,17 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Generate minimal LLM context for a symbol.
+    /// Generate LLM context for a symbol (markdown bundle by default).
     Context {
         /// Symbol name or FQN.
         symbol: String,
-        /// Approximate token budget (reserved for future compression).
-        #[arg(long)]
-        budget: Option<u32>,
+        /// Approximate token budget for snippet packing.
+        #[arg(long, default_value_t = 6000)]
+        budget: u32,
+        /// Task mode: fix, refactor, or onboard.
+        #[arg(long, value_enum, default_value_t = TaskArg::Fix)]
+        task: TaskArg,
+        /// Emit machine-readable JSON instead of markdown.
         #[arg(long)]
         json: bool,
     },
@@ -76,6 +81,24 @@ enum Commands {
         #[command(subcommand)]
         action: DomainAction,
     },
+}
+
+/// CLI task mode for `repoctx context`.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum TaskArg {
+    Fix,
+    Refactor,
+    Onboard,
+}
+
+impl From<TaskArg> for ContextTask {
+    fn from(value: TaskArg) -> Self {
+        match value {
+            TaskArg::Fix => ContextTask::Fix,
+            TaskArg::Refactor => ContextTask::Refactor,
+            TaskArg::Onboard => ContextTask::Onboard,
+        }
+    }
 }
 
 #[derive(Debug, Subcommand)]

@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use repoctx_query::QueryEngine;
+use repoctx_query::{ContextTask, QueryEngine};
 use rmcp::{
     handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{CallToolResult, Content, ErrorCode},
@@ -31,8 +31,10 @@ pub struct RepoCtxMcpServer {
 pub struct GetContextParams {
     /// Symbol name or FQN.
     pub symbol: String,
-    /// Optional token budget (reserved for future compression).
+    /// Optional token budget (default 6000).
     pub budget: Option<u32>,
+    /// Task mode: fix, refactor, or onboard.
+    pub task: Option<String>,
 }
 
 /// Input for `get_impact`.
@@ -64,6 +66,14 @@ pub struct GetDependenciesParams {
 
 fn default_depth() -> u32 {
     3
+}
+
+fn parse_context_task(raw: Option<&str>) -> ContextTask {
+    match raw.unwrap_or("fix").to_lowercase().as_str() {
+        "refactor" => ContextTask::Refactor,
+        "onboard" => ContextTask::Onboard,
+        _ => ContextTask::Fix,
+    }
 }
 
 impl RepoCtxMcpServer {
@@ -99,7 +109,7 @@ impl RepoCtxMcpServer {
 impl RepoCtxMcpServer {
     /// Returns LLM-optimized context for a symbol.
     #[tool(
-        description = "Get structured context for a symbol (responsibility, related components, invariants)"
+        description = "Get context bundle for a symbol: code snippets, impact, and markdown for agents"
     )]
     async fn get_context(
         &self,
@@ -110,12 +120,15 @@ impl RepoCtxMcpServer {
         let repo_root = self.repo_root.as_path().to_path_buf();
         let symbol = params.0.symbol;
         let budget = params.0.budget;
-        let mut result = tokio::task::spawn_blocking(move || engine.context(&symbol, budget))
+        let task = parse_context_task(params.0.task.as_deref());
+        let mut result = tokio::task::spawn_blocking(move || engine.context(&symbol, budget, task))
             .await
             .map_err(|e| McpError::new(ErrorCode::INTERNAL_ERROR, e.to_string(), None))?
             .map_err(Self::map_query_error)?;
         result = apply_symbol_enrichment(&peer, &repo_root, result).await;
-        Self::json_result(&result)
+        Ok(CallToolResult::success(vec![Content::text(
+            result.markdown,
+        )]))
     }
 
     /// Returns downstream impact analysis for a symbol.

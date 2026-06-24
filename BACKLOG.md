@@ -28,7 +28,7 @@
 | P1-R1 | Release | Tag **v0.1.0** + tap Homebrew + smoke test install | Blocca “uso reale” |
 | P1-R2 | Docs | Guida **“Use today”** in README: build → impact → MCP in Cursor | Workflow 3 passi |
 | P1-R3 | MCP | Esempio config Cursor / Claude Code (`repoctx-mcp`, `REPOCTX_ROOT`) | Copy-paste in README |
-| P1-R4 | DX | `repoctx context` migliora output **oggi**: symbol + file:line + related + `--json` stabile | Ponte fino a v0.2 |
+| P1-R4 | DX | `repoctx context` migliora output **oggi**: symbol + file:line + related + `--json` stabile | ✅ |
 
 ## P1 — Knowledge Layer v0.2 (bundle unico, non LLM Wiki clone)
 
@@ -42,8 +42,8 @@
 | P1-9 | Wiki | Graph-grounded ingest via MCP sampling (sottografo nel prompt) | Solo pagine stale/new |
 | P1-9b | Wiki | **Coda sync su `build --watch`** quando fingerprint cambia | Manutenzione automatica |
 | P1-10 | Wiki | Wiki lint deterministico (stale, claims, link, orphan) → `wiki_lint.json` | Exit code per CI |
-| P1-11 | Context | **Context Assembly** + packing greedy a `--budget` | Snippet da disco |
-| P1-11b | Context | **`--format md`** default + `--task fix\|refactor\|onboard` | Un file per l’agente |
+| P1-11 | Context | **Context Assembly** + packing greedy a `--budget` | ✅ |
+| P1-11b | Context | **`--format md`** default + `--task fix\|refactor\|onboard` | ✅ CLI + MCP |
 | P1-12 | MCP/CLI | `wiki sync\|lint\|show`, `get_wiki`, `get_context` → bundle completo | MCP markdown field |
 | P1-13 | Schema | `ContextBundle`, `WikiPage`, validazione artifact | Test integrazione |
 | P1-14 | Bench | Budget test: bundle quality su fixture `flows-payment` + `bench-small` | Regressione qualità |

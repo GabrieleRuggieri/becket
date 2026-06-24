@@ -112,17 +112,15 @@ pub fn execute(cli: Cli) -> Result<()> {
         Commands::Context {
             symbol,
             budget,
+            task,
             json,
         } => {
             let engine = QueryEngine::new(&cli.repo);
-            let result = engine.context(&symbol, budget)?;
+            let result = engine.context(&symbol, Some(budget), task.into())?;
             if json {
                 print_json(&result)?;
             } else {
-                println!("{}", result.responsibility);
-                if !result.related_components.is_empty() {
-                    println!("related: {}", result.related_components.join(", "));
-                }
+                println!("{}", result.markdown);
             }
         }
         Commands::Domain { action } => match action {

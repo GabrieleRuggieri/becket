@@ -1,7 +1,7 @@
 //! Structured query response types (CLI `--json` and MCP output).
 
 use repoctx_schema::artifacts::{FlowRecord, SymbolRecord};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Source of the optional enriched prose summary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -11,6 +11,50 @@ pub enum SummarySource {
     Deterministic,
     /// Host-delegated MCP sampling, cached in the index.
     McpSampling,
+}
+
+/// Task mode for context assembly ranking.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ContextTask {
+    /// Focused snippets, callers, tests, shallow impact.
+    #[default]
+    Fix,
+    /// Deep impact, cross-module edges.
+    Refactor,
+    /// Flow overview, fewer snippets.
+    Onboard,
+}
+
+impl ContextTask {
+    /// Downstream impact traversal depth for this task.
+    #[must_use]
+    pub const fn impact_depth(self) -> u32 {
+        match self {
+            Self::Fix => 2,
+            Self::Refactor => 5,
+            Self::Onboard => 1,
+        }
+    }
+}
+
+/// A slice of real source code from disk.
+#[derive(Debug, Clone, Serialize)]
+pub struct CodeSnippet {
+    /// Anchored symbol id.
+    pub symbol_id: String,
+    /// Symbol display name.
+    pub symbol_name: String,
+    /// Repository-relative file path.
+    pub file_path: String,
+    /// 1-based start line.
+    pub start_line: u32,
+    /// 1-based end line.
+    pub end_line: u32,
+    /// Fence language hint for markdown.
+    pub language: String,
+    /// Source lines (never model-generated).
+    pub content: String,
 }
 
 /// Impact analysis result for a symbol.
@@ -62,6 +106,20 @@ pub struct ContextResult {
     pub invariants: Vec<String>,
     /// Semantically similar symbol names (sqlite-vec), when embeddings are indexed.
     pub semantic_neighbors: Vec<String>,
+    /// Real source snippets sliced from disk.
+    pub snippets: Vec<CodeSnippet>,
+    /// Direct caller symbol names.
+    pub callers: Vec<String>,
+    /// Direct callee symbol names.
+    pub callees: Vec<String>,
+    /// Downstream symbol ids within the task impact depth.
+    pub affected_symbol_ids: Vec<String>,
+    /// Agent-ready markdown bundle (one file).
+    pub markdown: String,
+    /// Task mode used for assembly.
+    pub task: ContextTask,
+    /// Token budget used for snippet packing.
+    pub budget_tokens: u32,
 }
 
 /// Direct and transitive dependency listing.
