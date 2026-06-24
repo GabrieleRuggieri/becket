@@ -25,7 +25,7 @@
 | P1-1 | Embeddings | ONNX locale (BGE-small) + `sqlite-vec` | ✅ fastembed BGE-small + download HF cache |
 | P1-2 | MCP | **Sampling** per enrichment nomi/summary (host model) | ✅ lazy + cache SQLite |
 | P1-3 | Security | Secret redaction prima di sampling | ✅ v0 regex in `redact.rs` |
-| P1-4 | Workspace | Multi-repo manifest + cross-repo linker |
+| P1-4 | Workspace | Multi-repo manifest + cross-repo linker | ✅ `repoctx.workspace.toml` + `workspace build` |
 | P1-5 | Distribuzione | `cargo-dist`, Homebrew tap, npm wrapper |
 | P1-6 | Bench | Fixture small→huge + budget CI (200ms incremental, 100ms query p95) | ✅ `bench-small` + test CI |
 | P1-7 | Watch | `repoctx build --watch` | ✅ debounce 400ms, ignora `.repoctx`/`.git` |
@@ -34,8 +34,8 @@
 
 | ID | Area | Task |
 |---|---|---|
-| P2-1 | Plugins | Registry grammatiche tree-sitter per nuove lingue |
-| P2-2 | Docs | `CONTRIBUTING.md`, guida language plugin |
+| P2-1 | Plugins | Registry grammatiche tree-sitter per nuove lingue | ✅ `GrammarRegistry` + `repoctx.languages.toml` |
+| P2-2 | Docs | `CONTRIBUTING.md`, guida language plugin | ✅ CONTRIBUTING.md |
 | P2-3 | ADR | `docs/adr/` per decisioni future |
 | P2-4 | Windows | Tier-2 CI e triage |
 
@@ -43,9 +43,9 @@
 
 ## Prossimo consigliato
 
-1. **P2-1** — registry grammatiche tree-sitter
-2. **P2-2** — `CONTRIBUTING.md` + guida plugin lingue
-3. **P1-4** — multi-repo manifest + cross-repo linker
+1. **P1-5** — `cargo-dist`, Homebrew tap, npm wrapper
+2. **P2-3** — `docs/adr/` per decisioni future
+3. **P1-4+** — linker gRPC/queue e client HTTP più ricchi
 
 ---
 

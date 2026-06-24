@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "BoundaryKind": {
+      "description": "Boundary crossed by a cross-repo or cross-service edge.",
+      "oneOf": [
+        {
+          "const": "network",
+          "description": "Network call across service boundary.",
+          "type": "string"
+        },
+        {
+          "const": "queue",
+          "description": "Message queue boundary.",
+          "type": "string"
+        },
+        {
+          "const": "shared_lib",
+          "description": "Shared library dependency across repos.",
+          "type": "string"
+        }
+      ]
+    },
+    "CrossRepoEdgeRecord": {
+      "description": "A directed edge between symbols in different repositories.",
+      "properties": {
+        "boundary": {
+          "$ref": "#/$defs/BoundaryKind",
+          "description": "Cross-service boundary."
+        },
+        "confidence": {
+          "description": "Confidence score (1.0 = explicit contract).",
+          "format": "float",
+          "type": "number"
+        },
+        "dstRepo": {
+          "description": "Target repository name.",
+          "type": "string"
+        },
+        "dstSymbolId": {
+          "description": "Target symbol id.",
+          "type": "string"
+        },
+        "edgeType": {
+          "$ref": "#/$defs/EdgeType",
+          "description": "Edge type."
+        },
+        "id": {
+          "description": "Stable edge identifier.",
+          "type": "string"
+        },
+        "label": {
+          "description": "Optional human label (route, package name, …).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "srcRepo": {
+          "description": "Source repository name.",
+          "type": "string"
+        },
+        "srcSymbolId": {
+          "description": "Source symbol id.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "srcRepo",
+        "srcSymbolId",
+        "dstRepo",
+        "dstSymbolId",
+        "edgeType",
+        "boundary",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "EdgeType": {
+      "description": "Typed relationship between two symbols.",
+      "oneOf": [
+        {
+          "const": "calls",
+          "description": "Function or method invocation.",
+          "type": "string"
+        },
+        {
+          "const": "imports",
+          "description": "Module or package import.",
+          "type": "string"
+        },
+        {
+          "const": "extends",
+          "description": "Class inheritance.",
+          "type": "string"
+        },
+        {
+          "const": "implements",
+          "description": "Interface or trait implementation.",
+          "type": "string"
+        },
+        {
+          "const": "references",
+          "description": "Generic reference without a stronger kind.",
+          "type": "string"
+        },
+        {
+          "const": "reads",
+          "description": "Read access to a symbol.",
+          "type": "string"
+        },
+        {
+          "const": "writes",
+          "description": "Write access to a symbol.",
+          "type": "string"
+        },
+        {
+          "const": "http",
+          "description": "HTTP client to server edge.",
+          "type": "string"
+        },
+        {
+          "const": "grpc",
+          "description": "gRPC client to server edge.",
+          "type": "string"
+        },
+        {
+          "const": "queue",
+          "description": "Message queue producer to consumer edge.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Cross-repo edges artifact (`cross_repo.json`).",
+  "properties": {
+    "edges": {
+      "description": "Cross-repository edges.",
+      "items": {
+        "$ref": "#/$defs/CrossRepoEdgeRecord"
+      },
+      "type": "array"
+    },
+    "schemaVersion": {
+      "description": "SemVer schema version for this artifact.",
+      "type": "string"
+    },
+    "workspace": {
+      "description": "Workspace name.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "workspace",
+    "edges"
+  ],
+  "title": "CrossRepoArtifact",
+  "type": "object"
+}

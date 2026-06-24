@@ -39,6 +39,11 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Build and link every repository in a workspace manifest.
+    Workspace {
+        #[command(subcommand)]
+        action: WorkspaceAction,
+    },
     /// Show downstream impact for a symbol.
     Impact {
         /// Symbol name or FQN.
@@ -70,6 +75,22 @@ enum Commands {
     Domain {
         #[command(subcommand)]
         action: DomainAction,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum WorkspaceAction {
+    /// Build all workspace members and emit `cross_repo.json`.
+    Build {
+        /// Re-parse only changed files in each member repo.
+        #[arg(long, default_value_t = true)]
+        incremental: bool,
+        /// Skip local embedding generation.
+        #[arg(long)]
+        no_embeddings: bool,
+        /// Emit machine-readable JSON to stdout.
+        #[arg(long)]
+        json: bool,
     },
 }
 

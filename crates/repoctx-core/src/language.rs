@@ -1,9 +1,11 @@
-//! Language detection from file extensions.
+//! Language detection from file extensions via the grammar registry.
 
 use std::path::Path;
 
+use crate::parse::GrammarRegistry;
+
 /// Supported language identifiers for the v1 heuristic extractor.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Language {
     /// Rust source files.
     Rust,
@@ -41,21 +43,14 @@ impl Language {
     }
 }
 
-/// Detects language from a file path extension.
-///
-/// # Arguments
-///
-/// * `path` - Repository-relative or absolute file path.
+/// Detects language from a file path extension using the built-in grammar registry.
 pub fn detect_language(path: &Path) -> Language {
-    match path.extension().and_then(|e| e.to_str()) {
-        Some("rs") => Language::Rust,
-        Some("ts" | "tsx") => Language::TypeScript,
-        Some("js" | "jsx" | "mjs" | "cjs") => Language::JavaScript,
-        Some("py" | "pyi") => Language::Python,
-        Some("go") => Language::Go,
-        Some("java") => Language::Java,
-        _ => Language::Unknown,
-    }
+    GrammarRegistry::builtins().detect_language(path)
+}
+
+/// Detects language using a custom registry (e.g. with `repoctx.languages.toml` overrides).
+pub fn detect_language_with_registry(path: &Path, registry: &GrammarRegistry) -> Language {
+    registry.detect_language(path)
 }
 
 #[cfg(test)]

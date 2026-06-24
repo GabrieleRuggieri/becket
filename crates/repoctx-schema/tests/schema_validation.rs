@@ -49,6 +49,10 @@ fn minimal_artifacts_validate() {
             "architecture",
             r#"{"schemaVersion":"1.0.0","modules":[],"edges":[]}"#,
         ),
+        (
+            "cross_repo",
+            r#"{"schemaVersion":"1.0.0","workspace":"demo","edges":[]}"#,
+        ),
     ];
 
     for (name, json) in samples {

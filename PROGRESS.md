@@ -279,3 +279,21 @@
 
 - 49 test passano con `REPOCTX_HASH_EMBED=1` in CI
 - `cargo clippy --all-features` pulito
+
+---
+
+## 2026-06-23 — Sessione 15: workspace + grammar registry + CONTRIBUTING (branch `feature/workspace-plugins-docs`)
+
+### Completato
+
+- **P1-4 Workspace**: `repoctx.workspace.toml`, `repoctx workspace build`, `CrossRepoLinker`
+- **HTTP cross-repo**: match client (`axios`/`fetch`/`requests`) ↔ server route entrypoints
+- **Artifact** `cross_repo.json` + JSON Schema in `schemas/`
+- **P2-1 Grammar registry**: `GrammarRegistry::builtins()`, override `repoctx.languages.toml`
+- **P2-2 Docs**: `CONTRIBUTING.md` con guida plugin lingue
+- Fixture `tests/fixtures/workspace/` + integration test
+
+### Verificato
+
+- 57 test passano (`REPOCTX_HASH_EMBED=1`)
+- `cargo clippy --all-features` pulito

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor};
+use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor, WorkspacePipeline};
 use repoctx_query::QueryEngine;
 use repoctx_schema::{validate_artifact_json, ARTIFACT_NAMES};
 use tempfile::TempDir;
@@ -69,13 +69,18 @@ fn read_artifacts(root: &Path) -> HashMap<String, String> {
 }
 
 fn validate_artifacts(root: &Path) {
-    let artifacts = read_artifacts(root);
+    let dir = root.join(".repoctx");
     for name in ARTIFACT_NAMES {
         let filename = format!("{name}.json");
-        let json = artifacts
-            .get(&filename)
-            .unwrap_or_else(|| panic!("missing {filename}"));
-        validate_artifact_json(name, json)
+        let path = dir.join(&filename);
+        if !path.is_file() {
+            if *name == "cross_repo" {
+                continue;
+            }
+            panic!("missing {filename}");
+        }
+        let json = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
+        validate_artifact_json(name, &json)
             .unwrap_or_else(|e| panic!("{filename} failed schema validation: {e}"));
     }
 }
@@ -357,4 +362,32 @@ fn build_with_embeddings_indexes_symbol_vectors() {
         !ctx.semantic_neighbors.is_empty(),
         "payment-related symbols should cluster"
     );
+}
+
+#[test]
+fn workspace_build_links_http_cross_repo_edges() {
+    let work = isolated_fixture("workspace");
+    let report = WorkspacePipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("workspace build");
+
+    assert_eq!(report.repos.len(), 2);
+    assert!(
+        report.cross_repo_edges >= 1,
+        "expected HTTP cross-repo edge between gateway and users"
+    );
+
+    let cross_repo_path = work.root.join(".repoctx/cross_repo.json");
+    let cross_repo_json = fs::read_to_string(&cross_repo_path).expect("cross_repo.json");
+    repoctx_schema::validate_artifact_json("cross_repo", &cross_repo_json).expect("schema");
+    assert!(cross_repo_json.contains("edgeType"));
+    assert!(cross_repo_json.contains("\"http\""));
+    assert!(cross_repo_json.contains("gateway"));
+    assert!(cross_repo_json.contains("users"));
 }

@@ -2,10 +2,11 @@
 
 use std::path::Path;
 
+use crate::parse::GrammarRegistry;
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_schema::edge::EdgeType;
 use repoctx_schema::symbol::{EntrypointKind, SymbolKind, Visibility};
-use tree_sitter::{Language, Node, Parser};
+use tree_sitter::{Node, Parser};
 
 use crate::error::CoreError;
 use crate::ids::stable_symbol_id;
@@ -67,6 +68,8 @@ pub struct FileParseResult {
     pub inheritance: Vec<ParsedInheritance>,
     /// HTTP route entrypoints (resolved to symbols at index time).
     pub http_routes: Vec<ParsedHttpRoute>,
+    /// Outbound HTTP client calls (for cross-repo linking).
+    pub http_clients: Vec<crate::parse::http_clients::ParsedHttpClient>,
     /// Detected entrypoints.
     pub entrypoints: Vec<ParsedEntrypoint>,
 }
@@ -115,6 +118,7 @@ impl TreeSitterParser {
             imports: ctx.imports,
             inheritance: ctx.inheritance,
             http_routes: ctx.http_routes,
+            http_clients: ctx.http_clients,
             entrypoints: ctx.entrypoints,
         })
     }
@@ -127,6 +131,7 @@ struct ParseContext {
     imports: Vec<ParsedImport>,
     inheritance: Vec<ParsedInheritance>,
     http_routes: Vec<ParsedHttpRoute>,
+    http_clients: Vec<crate::parse::http_clients::ParsedHttpClient>,
     entrypoints: Vec<ParsedEntrypoint>,
     scope_stack: Vec<String>,
 }
@@ -140,6 +145,7 @@ impl ParseContext {
             imports: Vec::new(),
             inheritance: Vec::new(),
             http_routes: Vec::new(),
+            http_clients: Vec::new(),
             entrypoints: Vec::new(),
             scope_stack: Vec::new(),
         }
@@ -259,6 +265,16 @@ fn walk_node(node: Node, source: &[u8], ctx: &mut ParseContext) {
         "call_expression" | "call" => {
             if let Some(route) = http_routes::detect_route_call(node, source, &ctx.file_path) {
                 ctx.http_routes.push(route);
+            }
+            if let Some(scope) = ctx.current_scope() {
+                if let Some(client) = crate::parse::http_clients::detect_http_client_call(
+                    node,
+                    source,
+                    &ctx.file_path,
+                    scope,
+                ) {
+                    ctx.http_clients.push(client);
+                }
             }
             if let Some(name) = extract_call_name(node, source) {
                 ctx.record_call(&name);
@@ -513,19 +529,8 @@ fn symbol_kind_label(kind: SymbolKind) -> &'static str {
     }
 }
 
-fn language_to_tree_sitter(language: RepoLanguage) -> Result<Language, CoreError> {
-    let lang = match language {
-        RepoLanguage::Rust => tree_sitter_rust::LANGUAGE.into(),
-        RepoLanguage::Python => tree_sitter_python::LANGUAGE.into(),
-        RepoLanguage::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
-        RepoLanguage::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-        RepoLanguage::Go => tree_sitter_go::LANGUAGE.into(),
-        RepoLanguage::Java => tree_sitter_java::LANGUAGE.into(),
-        RepoLanguage::Unknown => {
-            return Err(CoreError::Parse("unsupported language".into()));
-        }
-    };
-    Ok(lang)
+fn language_to_tree_sitter(language: RepoLanguage) -> Result<tree_sitter::Language, CoreError> {
+    GrammarRegistry::builtins().tree_sitter_language(language)
 }
 
 #[cfg(test)]

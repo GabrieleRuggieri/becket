@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+name = "demo-workspace"
+
+[[repos]]
+name = "gateway"
+path = "gateway"
+
+[[repos]]
+name = "users"
+path = "users"
+
+[[contracts.http]]
+client_repo = "gateway"
+server_repo = "users"
+method = "GET"
+path = "/users"

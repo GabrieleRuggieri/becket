@@ -8,6 +8,7 @@ use crate::artifacts::{
     ArchitectureArtifact, DependenciesArtifact, EntrypointsArtifact, FlowsArtifact, SymbolsArtifact,
 };
 use crate::error::SchemaError;
+use crate::workspace::CrossRepoArtifact;
 
 /// Artifact base names (without `.json` extension).
 pub const ARTIFACT_NAMES: &[&str] = &[
@@ -16,6 +17,7 @@ pub const ARTIFACT_NAMES: &[&str] = &[
     "flows",
     "entrypoints",
     "architecture",
+    "cross_repo",
 ];
 
 /// Returns the JSON Schema document for a named artifact.
@@ -26,6 +28,7 @@ pub fn root_schema_for(artifact: &str) -> Result<Value, SchemaError> {
         "flows" => serde_json::to_value(schema_for!(FlowsArtifact))?,
         "entrypoints" => serde_json::to_value(schema_for!(EntrypointsArtifact))?,
         "architecture" => serde_json::to_value(schema_for!(ArchitectureArtifact))?,
+        "cross_repo" => serde_json::to_value(schema_for!(CrossRepoArtifact))?,
         other => {
             return Err(SchemaError::UnknownArtifact(other.to_string()));
         }

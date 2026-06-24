@@ -1,12 +1,12 @@
 //! CLI command handlers delegating to core and query crates.
 
 use anyhow::Result;
-use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor};
+use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor, WorkspacePipeline};
 use repoctx_query::QueryEngine;
 use serde::Serialize;
 
 use crate::watch;
-use crate::{Cli, Commands, DomainAction};
+use crate::{Cli, Commands, DomainAction, WorkspaceAction};
 
 /// Dispatches the parsed CLI to the appropriate handler.
 pub fn execute(cli: Cli) -> Result<()> {
@@ -42,6 +42,35 @@ pub fn execute(cli: Cli) -> Result<()> {
                 }
             }
         }
+        Commands::Workspace { action } => match action {
+            WorkspaceAction::Build {
+                incremental,
+                no_embeddings,
+                json,
+            } => {
+                let options = BuildOptions {
+                    incremental,
+                    no_embeddings,
+                };
+                let report = WorkspacePipeline::new(&cli.repo, options).run()?;
+                if json {
+                    print_json(&report)?;
+                } else {
+                    println!(
+                        "workspace build complete: {} repos, {} cross-repo edges → {}",
+                        report.repos.len(),
+                        report.cross_repo_edges,
+                        report.output_dir
+                    );
+                    for repo in &report.repos {
+                        println!(
+                            "  {}: {} symbols, {} edges",
+                            repo.name, repo.report.symbols_indexed, repo.report.edges_indexed
+                        );
+                    }
+                }
+            }
+        },
         Commands::Impact {
             symbol,
             depth,

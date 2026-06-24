@@ -30,6 +30,24 @@ pub fn stable_file_id(path: &str) -> String {
     stable_id(&["file", path])
 }
 
+/// Builds a stable cross-repo edge id.
+pub fn stable_cross_repo_edge_id(
+    src_repo: &str,
+    src_symbol_id: &str,
+    dst_repo: &str,
+    dst_symbol_id: &str,
+    edge_type: &str,
+) -> String {
+    stable_id(&[
+        "cross_edge",
+        src_repo,
+        src_symbol_id,
+        dst_repo,
+        dst_symbol_id,
+        edge_type,
+    ])
+}
+
 fn stable_id(parts: &[&str]) -> String {
     let mut hasher = Sha256::new();
     for part in parts {

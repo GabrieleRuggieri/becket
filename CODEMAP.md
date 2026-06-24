@@ -17,6 +17,31 @@
 
 ```
 repoctx-cli::main
+  └─ commands::execute(Build | Workspace)
+       └─ repoctx-core::BuildPipeline::run  (single repo)
+       └─ repoctx-core::WorkspacePipeline::run  (multi-repo)
+            ├─ BuildPipeline per ogni membro
+            ├─ CrossRepoLinker (HTTP client ↔ server route)
+            └─ ArtifactWriter → .repoctx/cross_repo.json
+```
+
+### `repoctx workspace build`
+
+```
+repoctx-cli::workspace build
+  └─ WorkspacePipeline::run
+       ├─ parse repoctx.workspace.toml
+       ├─ BuildPipeline × N repos
+       ├─ CrossRepoLinker::link
+       └─ .repoctx/cross_repo.json
+```
+
+---
+
+## `repoctx build` (dettaglio singolo repo)
+
+```
+repoctx-cli::main
   └─ commands::execute(Build)
        └─ repoctx-core::BuildPipeline::run
             ├─ FileWalker::discover          # ignore + .repoctxignore
@@ -93,4 +118,9 @@ flowchart BT
     dependencies.json
     flows.json
     entrypoints.json
+
+<workspace-root>/
+  repoctx.workspace.toml
+  .repoctx/
+    cross_repo.json     # workspace-level cross-repo edges
 ```

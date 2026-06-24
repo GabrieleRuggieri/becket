@@ -7,7 +7,8 @@ use ignore::WalkBuilder;
 use sha2::{Digest, Sha256};
 
 use crate::error::CoreError;
-use crate::language::{detect_language, Language};
+use crate::language::Language;
+use crate::parse::GrammarRegistry;
 
 /// A source file discovered under the repository root.
 #[derive(Debug, Clone)]
@@ -27,6 +28,7 @@ pub struct SourceFile {
 /// Walks analyzable source files under `root`.
 pub struct FileWalker {
     root: PathBuf,
+    registry: GrammarRegistry,
 }
 
 impl FileWalker {
@@ -36,9 +38,11 @@ impl FileWalker {
     ///
     /// * `root` - Repository root directory.
     pub fn new(root: impl AsRef<Path>) -> Self {
-        Self {
-            root: root.as_ref().to_path_buf(),
-        }
+        let root = root.as_ref().to_path_buf();
+        let registry = GrammarRegistry::builtins()
+            .load_overrides_from_file(&root.join("repoctx.languages.toml"))
+            .unwrap_or_else(|_| GrammarRegistry::builtins());
+        Self { root, registry }
     }
 
     /// Discovers source files, skipping ignored paths.
@@ -73,7 +77,7 @@ impl FileWalker {
             }
 
             let absolute_path = entry.into_path();
-            let language = detect_language(&absolute_path);
+            let language = self.registry.detect_language(&absolute_path);
             if !language.is_supported() {
                 continue;
             }
