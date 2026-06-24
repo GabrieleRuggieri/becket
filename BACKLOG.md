@@ -22,7 +22,7 @@
 
 | ID | Area | Task |
 |---|---|---|
-| P1-1 | Embeddings | ONNX locale (BGE-small) + `sqlite-vec` |
+| P1-1 | Embeddings | ONNX locale (BGE-small) + `sqlite-vec` | ✅ hash v0 + sqlite-vec; ONNX via `REPOCTX_ONNX_MODEL` |
 | P1-2 | MCP | **Sampling** per enrichment nomi/summary (host model) | ✅ lazy + cache SQLite |
 | P1-3 | Security | Secret redaction prima di sampling | ✅ v0 regex in `redact.rs` |
 | P1-4 | Workspace | Multi-repo manifest + cross-repo linker |
@@ -43,8 +43,8 @@
 
 ## Prossimo consigliato
 
-1. **P1-1** — embeddings ONNX + sqlite-vec
-2. **P1-7** — `repoctx build --watch`
+1. **P1-7** — `repoctx build --watch`
+2. **P1-1** — tokenizer ONNX BGE-small completo + download modello
 3. **P2-1** — registry grammatiche tree-sitter
 
 ---

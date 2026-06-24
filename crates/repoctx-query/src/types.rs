@@ -60,6 +60,8 @@ pub struct ContextResult {
     pub external_dependencies: Vec<String>,
     /// Static invariants inferred from visibility and kind.
     pub invariants: Vec<String>,
+    /// Semantically similar symbol names (sqlite-vec), when embeddings are indexed.
+    pub semantic_neighbors: Vec<String>,
 }
 
 /// Direct and transitive dependency listing.

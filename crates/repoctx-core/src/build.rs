@@ -10,6 +10,7 @@ use repoctx_store::{ArtifactWriter, IndexStore, RepoCtxPaths};
 use tracing::info;
 
 use crate::domain::apply_domain_overrides;
+use crate::embed::index_symbol_embeddings;
 use crate::error::CoreError;
 use crate::flow::{CallEdge, FlowReconstructor};
 use crate::graph::GraphResolver;
@@ -22,7 +23,7 @@ use crate::walker::{FileWalker, SourceFile};
 pub struct BuildOptions {
     /// When true, skip files whose content hash is unchanged.
     pub incremental: bool,
-    /// When true, skip embedding generation (not yet implemented).
+    /// When true, skip embedding generation.
     pub no_embeddings: bool,
 }
 
@@ -52,6 +53,8 @@ pub struct BuildReport {
     pub entrypoints_indexed: usize,
     /// Flows auto-discovered.
     pub flows_indexed: usize,
+    /// Symbol embeddings indexed (when enabled).
+    pub embeddings_indexed: usize,
     /// Path to `.repoctx/` output directory.
     pub output_dir: String,
 }
@@ -159,6 +162,13 @@ impl BuildPipeline {
         store.sync_domains_from_flows(&discovered_flows)?;
         let flows_indexed = discovered_flows.len();
 
+        let embeddings_indexed = if self.options.no_embeddings {
+            0
+        } else {
+            store.clear_symbol_vectors()?;
+            index_symbol_embeddings(&store, &all_symbols)?
+        };
+
         let writer = ArtifactWriter::new(self.paths.clone());
         let (symbols, dependencies, flows, entrypoints, architecture) = store.export_artifacts()?;
 
@@ -176,6 +186,7 @@ impl BuildPipeline {
             edges_indexed: edges.len(),
             entrypoints_indexed,
             flows_indexed,
+            embeddings_indexed,
             output_dir: writer.output_dir().display().to_string(),
         })
     }

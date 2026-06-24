@@ -214,6 +214,7 @@ mod tests {
             related_components: vec!["Charge".into()],
             external_dependencies: vec!["src".into()],
             invariants: vec!["visibility: Public".into()],
+            semantic_neighbors: vec![],
         };
         let prompt = build_symbol_prompt(&context);
         assert!(prompt.contains("pay"));

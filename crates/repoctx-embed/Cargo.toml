@@ -1,0 +1,13 @@
+[package]
+name = "repoctx-embed"
+description = "Local deterministic and ONNX embeddings for RepoCtx symbols"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+repoctx-schema = { workspace = true }
+sha2 = { workspace = true }
+tracing = { workspace = true }

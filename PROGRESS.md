@@ -229,3 +229,20 @@
 
 - Budget test passano in locale
 - `cargo clippy` pulito
+
+---
+
+## 2026-06-23 — Sessione 12: embeddings + sqlite-vec (branch `feature/embeddings-sqlite-vec`)
+
+### Completato
+
+- **`repoctx-embed`**: embedding deterministico 384-dim (hash) + hook `REPOCTX_ONNX_MODEL`
+- **sqlite-vec**: tabella virtuale `symbol_vec`, KNN `nearest_symbol_ids`
+- **Build**: `index_symbol_embeddings` quando `--no-embeddings` non è attivo
+- **Query**: `semantic_neighbors` in `get_context`
+- Integration test `build_with_embeddings_indexes_symbol_vectors`
+
+### Verificato
+
+- Test store vec + integration embeddings passano
+- CI continua con `no_embeddings: true` negli altri test

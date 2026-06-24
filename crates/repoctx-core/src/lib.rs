@@ -6,6 +6,7 @@
 
 pub mod build;
 pub mod domain;
+pub mod embed;
 pub mod error;
 pub mod extract;
 pub mod flow;

@@ -332,3 +332,29 @@ fn build_http_routes_fixture_detects_express_flask_and_spring() {
     assert!(entrypoints.contains("GET /health"));
     assert!(entrypoints.contains("GET /items"));
 }
+
+#[test]
+fn build_with_embeddings_indexes_symbol_vectors() {
+    let work = isolated_fixture("bench-small");
+    let report = BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: false,
+        },
+    )
+    .run()
+    .expect("build");
+
+    assert!(
+        report.embeddings_indexed >= report.symbols_indexed,
+        "expected an embedding per symbol"
+    );
+
+    let engine = QueryEngine::new(&work.root);
+    let ctx = engine.context("capture", None).expect("context");
+    assert!(
+        !ctx.semantic_neighbors.is_empty(),
+        "payment-related symbols should cluster"
+    );
+}

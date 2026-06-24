@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/repoctx-cli",
     "crates/repoctx-core",
+    "crates/repoctx-embed",
     "crates/repoctx-mcp",
     "crates/repoctx-query",
     "crates/repoctx-schema",
@@ -37,6 +38,7 @@ tree-sitter-typescript = "0.23"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 repoctx-core = { path = "crates/repoctx-core" }
+repoctx-embed = { path = "crates/repoctx-embed" }
 repoctx-query = { path = "crates/repoctx-query" }
 repoctx-schema = { path = "crates/repoctx-schema" }
 repoctx-store = { path = "crates/repoctx-store" }

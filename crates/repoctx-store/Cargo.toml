@@ -13,8 +13,10 @@ repoctx-schema = { workspace = true }
 rusqlite = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sqlite-vec = "0.1"
 thiserror = { workspace = true }
 tracing = { workspace = true }
+zerocopy = { version = "0.8", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3"

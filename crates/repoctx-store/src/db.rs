@@ -9,8 +9,10 @@ use repoctx_schema::artifacts::{
 use repoctx_schema::edge::{BoundaryKind, EdgeType};
 use repoctx_schema::symbol::{EntrypointKind, SymbolKind, Visibility};
 use rusqlite::{params, Connection, OptionalExtension};
+use zerocopy::IntoBytes;
 
 use crate::error::StoreError;
+use crate::vec_ext::ensure_sqlite_vec;
 
 /// User-refined domain: `(flow_id, display_name, members)`.
 pub type DomainOverride = (String, String, Vec<(String, String)>);
@@ -47,6 +49,7 @@ impl IndexStore {
         if let Some(parent) = path.as_ref().parent() {
             std::fs::create_dir_all(parent)?;
         }
+        ensure_sqlite_vec();
         let conn = Connection::open(path)?;
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
         let store = Self { conn };
@@ -148,6 +151,17 @@ impl IndexStore {
             );
             ",
         )?;
+        self.ensure_symbol_vec_table()?;
+        Ok(())
+    }
+
+    fn ensure_symbol_vec_table(&self) -> Result<(), StoreError> {
+        self.conn.execute_batch(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS symbol_vec USING vec0(
+                embedding float[384],
+                +symbol_id TEXT
+            );",
+        )?;
         Ok(())
     }
 
@@ -162,6 +176,7 @@ impl IndexStore {
             DELETE FROM symbols;
             DELETE FROM modules;
             DELETE FROM files;
+            DELETE FROM symbol_vec;
             ",
         )?;
         Ok(())
@@ -231,10 +246,74 @@ impl IndexStore {
 
     /// Removes all symbols (and cascaded edges) for a file path before re-indexing.
     pub fn delete_symbols_for_path(&self, path: &str) -> Result<(), StoreError> {
+        self.delete_symbol_vectors_for_path(path)?;
         self.conn.execute(
             "DELETE FROM symbols WHERE file_id = (SELECT id FROM files WHERE path = ?1)",
             params![path],
         )?;
+        Ok(())
+    }
+
+    /// Removes vector rows for symbols in a file path.
+    pub fn delete_symbol_vectors_for_path(&self, path: &str) -> Result<(), StoreError> {
+        self.conn.execute(
+            "DELETE FROM symbol_vec WHERE symbol_id IN (
+                SELECT id FROM symbols WHERE file_id = (SELECT id FROM files WHERE path = ?1)
+             )",
+            params![path],
+        )?;
+        Ok(())
+    }
+
+    /// Inserts or replaces an embedding vector for a symbol.
+    pub fn upsert_symbol_embedding(
+        &self,
+        symbol_id: &str,
+        embedding: &[f32],
+    ) -> Result<(), StoreError> {
+        self.conn.execute(
+            "DELETE FROM symbol_vec WHERE symbol_id = ?1",
+            params![symbol_id],
+        )?;
+        self.conn.execute(
+            "INSERT INTO symbol_vec(symbol_id, embedding) VALUES (?1, ?2)",
+            params![symbol_id, embedding.as_bytes()],
+        )?;
+        Ok(())
+    }
+
+    /// Returns the nearest symbol ids to a query vector (cosine distance via sqlite-vec).
+    pub fn nearest_symbol_ids(
+        &self,
+        query: &[f32],
+        limit: usize,
+    ) -> Result<Vec<(String, f64)>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT symbol_id, distance
+             FROM symbol_vec
+             WHERE embedding MATCH ?1
+             ORDER BY distance
+             LIMIT ?2",
+        )?;
+        let rows = stmt
+            .query_map(params![query.as_bytes(), limit as i64], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)?))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Counts indexed symbol embeddings.
+    pub fn count_symbol_embeddings(&self) -> Result<usize, StoreError> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM symbol_vec", [], |row| row.get(0))?;
+        Ok(count as usize)
+    }
+
+    /// Clears all symbol embedding vectors.
+    pub fn clear_symbol_vectors(&self) -> Result<(), StoreError> {
+        self.conn.execute("DELETE FROM symbol_vec", [])?;
         Ok(())
     }
 
@@ -959,5 +1038,24 @@ mod tests {
         store.upsert_enrichment(&record).unwrap();
         let loaded = store.get_enrichment("symbol", "sym1").unwrap().unwrap();
         assert_eq!(loaded.summary, "Handles user checkout.");
+    }
+
+    #[test]
+    fn symbol_vec_nearest_neighbor_roundtrip() {
+        let dir = tempdir().unwrap();
+        let store = IndexStore::open(dir.path().join("index.db")).unwrap();
+        let mut a = vec![0f32; 384];
+        a[0] = 1.0;
+        let mut b = a.clone();
+        b[0] = 0.9;
+        b[1] = 0.1;
+        let mut c = vec![0f32; 384];
+        c[1] = 1.0;
+        store.upsert_symbol_embedding("sym_a", &a).unwrap();
+        store.upsert_symbol_embedding("sym_b", &b).unwrap();
+        store.upsert_symbol_embedding("sym_c", &c).unwrap();
+        let nearest = store.nearest_symbol_ids(&a, 2).unwrap();
+        assert!(!nearest.is_empty());
+        assert_eq!(nearest[0].0, "sym_a");
     }
 }

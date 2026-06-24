@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use repoctx_embed::{embed_with_model, symbol_embedding_text};
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_store::{IndexStore, RepoCtxPaths};
 
@@ -152,6 +153,10 @@ impl QueryEngine {
 
         let invariants = vec![format!("visibility: {:?}", root.visibility)];
 
+        let semantic_neighbors = self
+            .semantic_neighbor_names(&store, &root, 5)
+            .unwrap_or_default();
+
         Ok(ContextResult {
             symbol: root,
             responsibility,
@@ -160,7 +165,35 @@ impl QueryEngine {
             related_components,
             external_dependencies,
             invariants,
+            semantic_neighbors,
         })
+    }
+
+    fn semantic_neighbor_names(
+        &self,
+        store: &IndexStore,
+        symbol: &SymbolRecord,
+        limit: usize,
+    ) -> Result<Vec<String>, QueryError> {
+        if store.count_symbol_embeddings()? == 0 {
+            return Ok(Vec::new());
+        }
+        let query = embed_with_model(&symbol_embedding_text(symbol));
+        let hits = store.nearest_symbol_ids(&query, limit + 1)?;
+        if hits.is_empty() {
+            return Ok(Vec::new());
+        }
+        let id_to_name: std::collections::HashMap<_, _> = store
+            .load_symbols()?
+            .into_iter()
+            .map(|s| (s.id, s.name))
+            .collect();
+        Ok(hits
+            .into_iter()
+            .filter(|(id, _)| id != &symbol.id)
+            .take(limit)
+            .filter_map(|(id, _)| id_to_name.get(&id).cloned())
+            .collect())
     }
 
     /// Lists downstream dependencies for a symbol.
