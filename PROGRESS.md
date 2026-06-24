@@ -246,3 +246,18 @@
 
 - Test store vec + integration embeddings passano
 - CI continua con `no_embeddings: true` negli altri test
+
+---
+
+## 2026-06-23 — Sessione 13: build watch (branch `feature/build-watch`)
+
+### Completato
+
+- **`repoctx build --watch`**: watcher con `notify-debouncer-mini` (400ms)
+- Ignora `.repoctx`, `.git`, `target`, `node_modules`, `dist`, `build`
+- Build iniziale + rebuild incrementale su ogni burst di modifiche
+- Unit test filtro path
+
+### Verificato
+
+- `cargo test --all` e `cargo clippy` puliti

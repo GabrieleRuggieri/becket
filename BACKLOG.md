@@ -28,7 +28,7 @@
 | P1-4 | Workspace | Multi-repo manifest + cross-repo linker |
 | P1-5 | Distribuzione | `cargo-dist`, Homebrew tap, npm wrapper |
 | P1-6 | Bench | Fixture small→huge + budget CI (200ms incremental, 100ms query p95) | ✅ `bench-small` + test CI |
-| P1-7 | Watch | `repoctx build --watch` |
+| P1-7 | Watch | `repoctx build --watch` | ✅ debounce 400ms, ignora `.repoctx`/`.git` |
 
 ## P2 — Ecosistema
 
@@ -43,9 +43,9 @@
 
 ## Prossimo consigliato
 
-1. **P1-7** — `repoctx build --watch`
-2. **P1-1** — tokenizer ONNX BGE-small completo + download modello
-3. **P2-1** — registry grammatiche tree-sitter
+1. **P1-1** — tokenizer ONNX BGE-small + download modello
+2. **P2-1** — registry grammatiche tree-sitter
+3. **P2-2** — `CONTRIBUTING.md` + guida plugin lingue
 
 ---
 

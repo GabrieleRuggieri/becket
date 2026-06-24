@@ -5,6 +5,7 @@ use repoctx_core::{BuildOptions, BuildPipeline, DomainEditor};
 use repoctx_query::QueryEngine;
 use serde::Serialize;
 
+use crate::watch;
 use crate::{Cli, Commands, DomainAction};
 
 /// Dispatches the parsed CLI to the appropriate handler.
@@ -13,27 +14,32 @@ pub fn execute(cli: Cli) -> Result<()> {
         Commands::Build {
             incremental,
             no_embeddings,
+            watch,
             json,
         } => {
-            let pipeline = BuildPipeline::new(
-                &cli.repo,
-                BuildOptions {
-                    incremental,
-                    no_embeddings,
-                },
-            );
-            let report = pipeline.run()?;
-            if json {
-                print_json(&report)?;
+            let options = BuildOptions {
+                incremental,
+                no_embeddings,
+            };
+            if watch {
+                watch::run(&cli.repo, options, json)?;
             } else {
-                println!(
-                    "build complete: {} files, {} symbols, {} edges, {} flows → {}",
-                    report.files_parsed,
-                    report.symbols_indexed,
-                    report.edges_indexed,
-                    report.flows_indexed,
-                    report.output_dir
-                );
+                let pipeline = BuildPipeline::new(&cli.repo, options);
+                let report = pipeline.run()?;
+                if json {
+                    print_json(&report)?;
+                } else {
+                    println!(
+                        "build complete: {} parsed, {} skipped, {} symbols, {} edges, {} flows, {} embeddings → {}",
+                        report.files_parsed,
+                        report.files_skipped,
+                        report.symbols_indexed,
+                        report.edges_indexed,
+                        report.flows_indexed,
+                        report.embeddings_indexed,
+                        report.output_dir
+                    );
+                }
             }
         }
         Commands::Impact {

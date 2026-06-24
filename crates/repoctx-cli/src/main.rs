@@ -1,6 +1,7 @@
 //! RepoCtx CLI — local codebase intelligence layer.
 
 mod commands;
+mod watch;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -31,6 +32,9 @@ enum Commands {
         /// Skip local embedding generation.
         #[arg(long)]
         no_embeddings: bool,
+        /// Rebuild incrementally when source files change.
+        #[arg(long)]
+        watch: bool,
         /// Emit machine-readable JSON to stdout.
         #[arg(long)]
         json: bool,
