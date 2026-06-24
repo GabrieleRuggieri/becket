@@ -27,7 +27,7 @@
 | P1-3 | Security | Secret redaction prima di sampling | ✅ v0 regex in `redact.rs` |
 | P1-4 | Workspace | Multi-repo manifest + cross-repo linker |
 | P1-5 | Distribuzione | `cargo-dist`, Homebrew tap, npm wrapper |
-| P1-6 | Bench | Fixture small→huge + budget CI (200ms incremental, 100ms query p95) |
+| P1-6 | Bench | Fixture small→huge + budget CI (200ms incremental, 100ms query p95) | ✅ `bench-small` + test CI |
 | P1-7 | Watch | `repoctx build --watch` |
 
 ## P2 — Ecosistema
@@ -43,9 +43,9 @@
 
 ## Prossimo consigliato
 
-1. **P1-6** — benchmark fixture + budget CI
-2. **P1-1** — embeddings ONNX + sqlite-vec
-3. **P1-7** — `repoctx build --watch`
+1. **P1-1** — embeddings ONNX + sqlite-vec
+2. **P1-7** — `repoctx build --watch`
+3. **P2-1** — registry grammatiche tree-sitter
 
 ---
 

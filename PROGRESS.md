@@ -212,3 +212,20 @@
 
 - 38 test totali passano (`cargo test --all`)
 - `cargo clippy` pulito
+
+---
+
+## 2026-06-23 — Sessione 11: benchmark budget CI (branch `feature/bench-budget-ci`)
+
+### Completato
+
+- **Fixture `bench-small`**: mini-monorepo Rust (~10 file, call graph realistico)
+- **`bench_budget.rs`**: guardrail CI su latenza
+  - rebuild incrementale dopo touch singolo file **≤ 200 ms**
+  - query warm (`impact`/`context`/`flow`) **p95 ≤ 100 ms**
+- **CI**: step dedicato `cargo test -p repoctx-core --test bench_budget`
+
+### Verificato
+
+- Budget test passano in locale
+- `cargo clippy` pulito

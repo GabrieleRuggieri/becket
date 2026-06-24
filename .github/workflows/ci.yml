@@ -35,6 +35,9 @@ jobs:
       - name: Test
         run: cargo test --all
 
+      - name: Latency budget guards
+        run: cargo test -p repoctx-core --test bench_budget
+
       - name: Validate JSON Schema contract
         run: cargo test -p repoctx-schema --test schema_validation
 
