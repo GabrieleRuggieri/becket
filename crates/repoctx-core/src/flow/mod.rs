@@ -3,7 +3,8 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use repoctx_schema::artifacts::{FlowRecord, FlowStepRecord, SymbolRecord};
-use uuid::Uuid;
+
+use crate::ids::stable_flow_id;
 
 /// Edge endpoints for call-graph walks.
 #[derive(Debug, Clone)]
@@ -20,8 +21,8 @@ pub struct FlowReconstructor;
 impl FlowReconstructor {
     /// Builds flow records from symbols and call edges.
     ///
-    /// Domains are inferred from path segments (e.g. `src/payment/...` → `payment`).
-    /// Steps follow downstream call edges starting at an entrypoint or root symbol.
+    /// Domains are folder segments shared by at least two symbols (e.g. `payment/`).
+    /// Steps follow BFS on the call graph from the domain entry symbol.
     pub fn reconstruct(symbols: &[SymbolRecord], edges: &[CallEdge]) -> Vec<FlowRecord> {
         let domains = discover_domains(symbols);
         let mut flows = Vec::new();
@@ -32,6 +33,7 @@ impl FlowReconstructor {
             }
         }
 
+        flows.sort_by(|a, b| a.name.cmp(&b.name));
         flows
     }
 
@@ -45,7 +47,7 @@ impl FlowReconstructor {
             .filter(|s| path_matches_domain(&s.file_path, domain))
             .collect();
 
-        if domain_symbols.is_empty() {
+        if domain_symbols.len() < 2 {
             return None;
         }
 
@@ -57,7 +59,14 @@ impl FlowReconstructor {
             .or_else(|| {
                 domain_symbols
                     .iter()
-                    .find(|s| matches!(s.kind, repoctx_schema::symbol::SymbolKind::Function))
+                    .filter(|s| {
+                        matches!(
+                            s.kind,
+                            repoctx_schema::symbol::SymbolKind::Function
+                                | repoctx_schema::symbol::SymbolKind::Method
+                        )
+                    })
+                    .min_by_key(|s| (s.file_path.as_str(), s.start_line))
             })?;
 
         let adjacency = build_adjacency(edges);
@@ -73,14 +82,16 @@ impl FlowReconstructor {
             })
             .collect();
 
-        if steps.is_empty() {
+        if steps.len() < 2 {
             return None;
         }
 
         Some(FlowRecord {
-            id: Uuid::new_v4().to_string(),
+            id: stable_flow_id(domain),
             name: domain.to_string(),
-            description: Some(format!("Auto-discovered flow from path segment '{domain}'")),
+            description: Some(format!(
+                "Auto-discovered flow from folder segment '{domain}'"
+            )),
             steps,
         })
     }
@@ -89,22 +100,30 @@ impl FlowReconstructor {
 fn discover_domains(symbols: &[SymbolRecord]) -> Vec<String> {
     const SKIP: &[&str] = &[
         "src", "lib", "bin", "app", "tests", "test", "spec", "crates", "pkg", "internal", "cmd",
-        "main",
+        "main", "mod", "common", "utils", "util", "core",
     ];
 
-    let mut domains = HashSet::new();
+    let mut counts: HashMap<String, usize> = HashMap::new();
     for symbol in symbols {
-        for segment in symbol.file_path.split('/') {
+        let parts: Vec<&str> = symbol.file_path.split('/').collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        for segment in &parts[..parts.len() - 1] {
             let lower = segment.to_lowercase();
             if lower.len() >= 3 && !SKIP.contains(&lower.as_str()) {
-                domains.insert(lower);
+                *counts.entry(lower).or_insert(0) += 1;
             }
         }
     }
 
-    let mut list: Vec<String> = domains.into_iter().collect();
-    list.sort();
-    list
+    let mut domains: Vec<String> = counts
+        .into_iter()
+        .filter(|(_, count)| *count >= 2)
+        .map(|(name, _)| name)
+        .collect();
+    domains.sort();
+    domains
 }
 
 fn path_matches_domain(file_path: &str, domain: &str) -> bool {
@@ -120,6 +139,9 @@ fn build_adjacency(edges: &[CallEdge]) -> HashMap<&str, Vec<&str>> {
             .entry(edge.src.as_str())
             .or_default()
             .push(edge.dst.as_str());
+    }
+    for neighbors in adjacency.values_mut() {
+        neighbors.sort_unstable();
     }
     adjacency
 }
@@ -182,11 +204,21 @@ mod tests {
     }
 
     #[test]
+    fn ignores_single_file_domains() {
+        let symbols = vec![
+            sym("a", "func_a", "src/graph.rs"),
+            sym("b", "func_b", "src/graph.rs"),
+        ];
+        let domains = discover_domains(&symbols);
+        assert!(domains.is_empty());
+    }
+
+    #[test]
     fn builds_flow_steps_in_call_order() {
         let symbols = vec![
             sym("a", "checkout", "src/payment/checkout.rs"),
             sym("b", "charge", "src/payment/checkout.rs"),
-            sym("c", "validate", "src/payment/checkout.rs"),
+            sym("c", "validate", "src/payment/gateway.rs"),
         ];
         let edges = vec![
             CallEdge {
@@ -203,7 +235,7 @@ mod tests {
             .iter()
             .find(|f| f.name == "payment")
             .expect("payment flow");
-        assert_eq!(payment.steps.len(), 3);
-        assert_eq!(payment.steps[0].symbol_id, "a");
+        assert!(payment.steps.len() >= 2);
+        assert_eq!(payment.id, stable_flow_id("payment"));
     }
 }

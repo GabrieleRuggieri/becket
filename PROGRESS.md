@@ -77,3 +77,27 @@
 
 - MCP sampling (P1-2) non ancora implementato
 - JSON Schema artifacts (P0-6) prossimo step consigliato
+
+---
+
+## 2026-06-23 — Sessione 4: determinismo e algoritmi (branch `feature/determinism-and-algorithms`)
+
+### Completato
+
+- **ID deterministici** (`ids.rs`): SHA-256 su chiavi canoniche per simboli, edge, flow, file, entrypoint
+- **`GraphResolver` v2**: indice multi-livello (file → directory → globale) con disambiguazione `public`
+- **Import edges** v0: parsing `use`/`import` tree-sitter + risoluzione nel grafo
+- **`FlowReconstructor` v2**: filtro domini (≥2 simboli, skip cartelle generiche), BFS ordinato, ID stabili
+- **Rimossi UUID** da pipeline build/store (artifact byte-identici tra rebuild)
+- **Test determinismo**: `rebuild_produces_byte_identical_artifacts`
+
+### Verificato
+
+- 18 test totali passano (`cargo test --all`)
+- `cargo clippy` pulito
+
+### Note
+
+- Resolver globale ancora conservativo (ambiguità → nessun edge)
+- Flow reconstructor usa solo edge `calls`, non `imports`
+- `HeuristicExtractor` deprecato ma ancora presente in `extract.rs`

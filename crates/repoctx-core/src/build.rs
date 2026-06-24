@@ -4,14 +4,15 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use repoctx_schema::artifacts::EntrypointRecord;
+use repoctx_schema::edge::EdgeType;
 use repoctx_schema::symbol::EntrypointKind;
 use repoctx_store::{ArtifactWriter, IndexStore, RepoCtxPaths};
 use tracing::info;
-use uuid::Uuid;
 
 use crate::error::CoreError;
 use crate::flow::{CallEdge, FlowReconstructor};
 use crate::graph::GraphResolver;
+use crate::ids::{stable_entrypoint_id, stable_file_id};
 use crate::parse::{FileParseResult, ParsedCall, TreeSitterParser};
 use crate::walker::{FileWalker, SourceFile};
 
@@ -101,10 +102,7 @@ impl BuildPipeline {
 
             store.delete_symbols_for_path(&file.relative_path)?;
 
-            let file_id = match store.file_id(&file.relative_path)? {
-                Some(id) => id,
-                None => Uuid::new_v4().to_string(),
-            };
+            let file_id = stable_file_id(&file.relative_path);
 
             store.upsert_file(
                 &file_id,
@@ -125,8 +123,9 @@ impl BuildPipeline {
 
         let all_symbols = store.load_symbols()?;
         let all_calls = self.remap_calls(&parse_cache, &all_symbols);
+        let all_imports = collect_imports(&parse_cache);
 
-        let edges = GraphResolver::resolve_calls(&all_symbols, &all_calls);
+        let edges = GraphResolver::resolve(&all_symbols, &all_calls, &all_imports);
         store.clear_edges()?;
         for edge in &edges {
             store.insert_edge(edge)?;
@@ -137,6 +136,7 @@ impl BuildPipeline {
 
         let call_edges: Vec<CallEdge> = edges
             .iter()
+            .filter(|e| e.edge_type == EdgeType::Calls)
             .map(|e| CallEdge {
                 src: e.src_symbol_id.clone(),
                 dst: e.dst_symbol_id.clone(),
@@ -225,7 +225,7 @@ impl BuildPipeline {
         for symbol in symbols {
             if symbol.name == "main" {
                 store.insert_entrypoint(&EntrypointRecord {
-                    id: Uuid::new_v4().to_string(),
+                    id: stable_entrypoint_id(&symbol.id, "main"),
                     symbol_id: symbol.id.clone(),
                     kind: EntrypointKind::Main,
                     label: Some(symbol.file_path.clone()),
@@ -235,4 +235,11 @@ impl BuildPipeline {
         }
         Ok(count)
     }
+}
+
+fn collect_imports(parse_cache: &HashMap<String, FileParseResult>) -> Vec<crate::parse::ParsedImport> {
+    parse_cache
+        .values()
+        .flat_map(|parsed| parsed.imports.iter().cloned())
+        .collect()
 }

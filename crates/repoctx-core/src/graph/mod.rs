@@ -1,69 +1,217 @@
-//! Resolves parsed call edges to symbol ids in the index.
+//! Multi-level symbol index for precise call and import resolution.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use repoctx_schema::artifacts::{DependencyEdgeRecord, SymbolRecord};
 use repoctx_schema::edge::EdgeType;
-use uuid::Uuid;
+use repoctx_schema::symbol::Visibility;
 
-use crate::parse::ParsedCall;
+use crate::ids::stable_edge_id;
+use crate::parse::{ParsedCall, ParsedImport};
 
-/// Builds dependency edges from unresolved calls and the symbol catalog.
-pub struct GraphResolver;
+/// In-memory index for O(1) symbol lookup during graph resolution.
+pub struct SymbolIndex<'a> {
+    by_id: HashMap<&'a str, &'a SymbolRecord>,
+    by_file_and_name: HashMap<(&'a str, &'a str), &'a SymbolRecord>,
+    by_dir_and_name: HashMap<(String, &'a str), Vec<&'a SymbolRecord>>,
+    by_name: HashMap<&'a str, Vec<&'a SymbolRecord>>,
+}
 
-impl GraphResolver {
-    /// Resolves call edges to [`DependencyEdgeRecord`] entries.
-    ///
-    /// Resolution order for a callee name: same file by name, then any file by name.
-    pub fn resolve_calls(
-        symbols: &[SymbolRecord],
-        calls: &[ParsedCall],
-    ) -> Vec<DependencyEdgeRecord> {
-        let by_id: HashMap<&str, &SymbolRecord> =
-            symbols.iter().map(|s| (s.id.as_str(), s)).collect();
-        let mut by_name: HashMap<&str, Vec<&SymbolRecord>> = HashMap::new();
+impl<'a> SymbolIndex<'a> {
+    /// Builds an index from the symbol catalog.
+    pub fn new(symbols: &'a [SymbolRecord]) -> Self {
+        let mut by_id = HashMap::with_capacity(symbols.len());
+        let mut by_file_and_name = HashMap::new();
+        let mut by_dir_and_name: HashMap<(String, &'a str), Vec<&'a SymbolRecord>> =
+            HashMap::new();
+        let mut by_name: HashMap<&'a str, Vec<&'a SymbolRecord>> = HashMap::new();
+
         for symbol in symbols {
+            by_id.insert(symbol.id.as_str(), symbol);
+            by_file_and_name.insert((symbol.file_path.as_str(), symbol.name.as_str()), symbol);
+
+            if let Some(dir) = parent_dir(&symbol.file_path) {
+                by_dir_and_name
+                    .entry((dir, symbol.name.as_str()))
+                    .or_default()
+                    .push(symbol);
+            }
+
             by_name
                 .entry(symbol.name.as_str())
                 .or_default()
                 .push(symbol);
         }
 
+        Self {
+            by_id,
+            by_file_and_name,
+            by_dir_and_name,
+            by_name,
+        }
+    }
+
+    /// Resolves a callee from a call site using scoped lookup (file → directory → unique global).
+    pub fn resolve_call(&self, caller: &SymbolRecord, callee_name: &str) -> Option<&'a SymbolRecord> {
+        if let Some(symbol) = self
+            .by_file_and_name
+            .get(&(caller.file_path.as_str(), callee_name))
+        {
+            return Some(symbol);
+        }
+
+        if let Some(dir) = parent_dir(&caller.file_path) {
+            if let Some(candidates) = self.by_dir_and_name.get(&(dir, callee_name)) {
+                if let Some(resolved) = disambiguate(candidates) {
+                    return Some(resolved);
+                }
+            }
+        }
+
+        self.by_name
+            .get(callee_name)
+            .and_then(|candidates| disambiguate(candidates))
+    }
+
+    /// Resolves an imported name to a symbol (same rules as calls).
+    pub fn resolve_import(&self, importer: &SymbolRecord, imported_name: &str) -> Option<&'a SymbolRecord> {
+        self.resolve_call(importer, imported_name)
+    }
+}
+
+/// Builds dependency edges from calls and imports with deterministic ids.
+pub struct GraphResolver;
+
+impl GraphResolver {
+    /// Resolves call and import references to [`DependencyEdgeRecord`] entries.
+    pub fn resolve(
+        symbols: &[SymbolRecord],
+        calls: &[ParsedCall],
+        imports: &[ParsedImport],
+    ) -> Vec<DependencyEdgeRecord> {
+        let index = SymbolIndex::new(symbols);
         let mut edges = Vec::new();
+        let mut seen = HashMap::new();
+
         for call in calls {
-            let Some(caller) = by_id.get(call.caller_symbol_id.as_str()) else {
+            let Some(caller) = index.by_id.get(call.caller_symbol_id.as_str()) else {
                 continue;
             };
-            let Some(callee) = Self::resolve_callee(caller, &call.callee_name, &by_name) else {
+            let Some(callee) = index.resolve_call(caller, &call.callee_name) else {
                 continue;
             };
             if caller.id == callee.id {
                 continue;
             }
-            edges.push(DependencyEdgeRecord {
-                id: Uuid::new_v4().to_string(),
-                src_symbol_id: caller.id.clone(),
-                dst_symbol_id: callee.id.clone(),
-                edge_type: EdgeType::Calls,
-                boundary: None,
-                confidence: 1.0,
-            });
+            push_edge(
+                &mut edges,
+                &mut seen,
+                &caller.id,
+                &callee.id,
+                EdgeType::Calls,
+                1.0,
+            );
         }
+
+        for import in imports {
+            let Some(importer_symbol) = symbols
+                .iter()
+                .filter(|s| s.file_path == import.file_path)
+                .min_by_key(|s| s.start_line)
+            else {
+                continue;
+            };
+            let Some(target) = index.resolve_import(importer_symbol, &import.imported_name) else {
+                continue;
+            };
+            push_edge(
+                &mut edges,
+                &mut seen,
+                &importer_symbol.id,
+                &target.id,
+                EdgeType::Imports,
+                1.0,
+            );
+        }
+
+        edges.sort_by(|a, b| {
+            a.src_symbol_id
+                .cmp(&b.src_symbol_id)
+                .then_with(|| a.dst_symbol_id.cmp(&b.dst_symbol_id))
+                .then_with(|| format!("{:?}", a.edge_type).cmp(&format!("{:?}", b.edge_type)))
+        });
         edges
     }
 
-    fn resolve_callee<'a>(
-        caller: &SymbolRecord,
-        callee_name: &str,
-        by_name: &HashMap<&str, Vec<&'a SymbolRecord>>,
-    ) -> Option<&'a SymbolRecord> {
-        let candidates = by_name.get(callee_name)?;
-        candidates
-            .iter()
-            .find(|s| s.file_path == caller.file_path)
-            .copied()
-            .or_else(|| candidates.first().copied())
+    /// Backward-compatible call-only resolution.
+    pub fn resolve_calls(
+        symbols: &[SymbolRecord],
+        calls: &[ParsedCall],
+    ) -> Vec<DependencyEdgeRecord> {
+        Self::resolve(symbols, calls, &[])
     }
+}
+
+fn push_edge(
+    edges: &mut Vec<DependencyEdgeRecord>,
+    seen: &mut HashMap<String, ()>,
+    src: &str,
+    dst: &str,
+    edge_type: EdgeType,
+    confidence: f32,
+) {
+    let type_str = edge_type_as_str(edge_type);
+    let id = stable_edge_id(src, dst, type_str);
+    if seen.insert(id.clone(), ()).is_some() {
+        return;
+    }
+    edges.push(DependencyEdgeRecord {
+        id,
+        src_symbol_id: src.to_string(),
+        dst_symbol_id: dst.to_string(),
+        edge_type,
+        boundary: None,
+        confidence,
+    });
+}
+
+fn edge_type_as_str(edge_type: EdgeType) -> &'static str {
+    match edge_type {
+        EdgeType::Calls => "calls",
+        EdgeType::Imports => "imports",
+        EdgeType::Extends => "extends",
+        EdgeType::Implements => "implements",
+        EdgeType::References => "references",
+        EdgeType::Reads => "reads",
+        EdgeType::Writes => "writes",
+        EdgeType::Http => "http",
+        EdgeType::Grpc => "grpc",
+        EdgeType::Queue => "queue",
+    }
+}
+
+fn parent_dir(file_path: &str) -> Option<String> {
+    Path::new(file_path)
+        .parent()
+        .and_then(|p| p.to_str())
+        .filter(|p| !p.is_empty())
+        .map(str::to_string)
+}
+
+fn disambiguate<'a>(candidates: &[&'a SymbolRecord]) -> Option<&'a SymbolRecord> {
+    if candidates.len() == 1 {
+        return Some(candidates[0]);
+    }
+    let public: Vec<_> = candidates
+        .iter()
+        .filter(|s| s.visibility == Visibility::Public)
+        .copied()
+        .collect();
+    if public.len() == 1 {
+        return Some(public[0]);
+    }
+    None
 }
 
 #[cfg(test)]
@@ -104,5 +252,33 @@ mod tests {
         ];
         let edges = GraphResolver::resolve_calls(&symbols, &calls);
         assert_eq!(edges.len(), 2);
+    }
+
+    #[test]
+    fn prefers_same_file_over_global_duplicate() {
+        let symbols = vec![
+            sym("a", "helper", "src/a.rs"),
+            sym("b", "helper", "src/b.rs"),
+            sym("c", "caller", "src/a.rs"),
+        ];
+        let calls = vec![ParsedCall {
+            caller_symbol_id: "c".into(),
+            callee_name: "helper".into(),
+        }];
+        let edges = GraphResolver::resolve_calls(&symbols, &calls);
+        assert_eq!(edges.len(), 1);
+        assert_eq!(edges[0].dst_symbol_id, "a");
+    }
+
+    #[test]
+    fn edge_ids_are_deterministic() {
+        let symbols = vec![sym("a", "f", "src/a.rs"), sym("b", "g", "src/a.rs")];
+        let calls = vec![ParsedCall {
+            caller_symbol_id: "a".into(),
+            callee_name: "g".into(),
+        }];
+        let e1 = GraphResolver::resolve_calls(&symbols, &calls);
+        let e2 = GraphResolver::resolve_calls(&symbols, &calls);
+        assert_eq!(e1[0].id, e2[0].id);
     }
 }

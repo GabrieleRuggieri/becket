@@ -9,7 +9,6 @@ use repoctx_schema::artifacts::{
 use repoctx_schema::edge::{BoundaryKind, EdgeType};
 use repoctx_schema::symbol::{EntrypointKind, SymbolKind, Visibility};
 use rusqlite::{params, Connection, OptionalExtension};
-use uuid::Uuid;
 
 use crate::error::StoreError;
 
@@ -236,7 +235,7 @@ impl IndexStore {
                 "INSERT OR REPLACE INTO flow_steps (id, flow_id, step_order, symbol_id, external_system)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![
-                    Uuid::new_v4().to_string(),
+                    format!("{}:{}", flow.id, step.order),
                     flow.id,
                     step.order,
                     step.symbol_id,

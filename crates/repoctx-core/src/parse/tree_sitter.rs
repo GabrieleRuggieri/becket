@@ -5,9 +5,9 @@ use std::path::Path;
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_schema::symbol::{EntrypointKind, SymbolKind, Visibility};
 use tree_sitter::{Language, Node, Parser};
-use uuid::Uuid;
 
 use crate::error::CoreError;
+use crate::ids::stable_symbol_id;
 use crate::language::Language as RepoLanguage;
 
 /// A single unresolved call edge (resolved to symbol ids in the graph builder).
@@ -28,6 +28,15 @@ pub struct ParsedEntrypoint {
     pub kind: EntrypointKind,
 }
 
+/// An unresolved import edge (file-level, resolved in the graph builder).
+#[derive(Debug, Clone)]
+pub struct ParsedImport {
+    /// Repository-relative file path containing the import.
+    pub file_path: String,
+    /// Imported symbol name (last segment of the use path).
+    pub imported_name: String,
+}
+
 /// Symbols and relationships extracted from one source file.
 #[derive(Debug, Clone, Default)]
 pub struct FileParseResult {
@@ -37,6 +46,8 @@ pub struct FileParseResult {
     pub symbols: Vec<SymbolRecord>,
     /// Unresolved call edges within this file.
     pub calls: Vec<ParsedCall>,
+    /// Unresolved import edges declared in this file.
+    pub imports: Vec<ParsedImport>,
     /// Detected entrypoints.
     pub entrypoints: Vec<ParsedEntrypoint>,
 }
@@ -82,6 +93,7 @@ impl TreeSitterParser {
             path: relative_path.to_string(),
             symbols: ctx.symbols,
             calls: ctx.calls,
+            imports: ctx.imports,
             entrypoints: ctx.entrypoints,
         })
     }
@@ -91,6 +103,7 @@ struct ParseContext {
     file_path: String,
     symbols: Vec<SymbolRecord>,
     calls: Vec<ParsedCall>,
+    imports: Vec<ParsedImport>,
     entrypoints: Vec<ParsedEntrypoint>,
     scope_stack: Vec<String>,
 }
@@ -101,6 +114,7 @@ impl ParseContext {
             file_path: file_path.to_string(),
             symbols: Vec::new(),
             calls: Vec::new(),
+            imports: Vec::new(),
             entrypoints: Vec::new(),
             scope_stack: Vec::new(),
         }
@@ -117,9 +131,10 @@ impl ParseContext {
         node: Node,
         visibility: Visibility,
     ) -> String {
-        let id = Uuid::new_v4().to_string();
         let start_line = node.start_position().row as u32 + 1;
         let end_line = node.end_position().row as u32 + 1;
+        let kind_str = symbol_kind_label(kind);
+        let id = stable_symbol_id(&self.file_path, name, start_line, kind_str);
         let fqn = format!("{}::{}", self.file_path, name);
 
         if name == "main" {
@@ -190,6 +205,15 @@ fn walk_node(node: Node, source: &[u8], ctx: &mut ParseContext) {
         "call_expression" | "call" => {
             if let Some(name) = extract_call_name(node, source) {
                 ctx.record_call(&name);
+            }
+        }
+        // Rust use declarations
+        "use_declaration" | "import_statement" | "import_declaration" => {
+            if let Some(name) = extract_import_name(node, source) {
+                ctx.imports.push(ParsedImport {
+                    file_path: ctx.file_path.clone(),
+                    imported_name: name,
+                });
             }
         }
         _ => {}
@@ -276,6 +300,42 @@ fn node_text(node: Node, source: &[u8]) -> Option<String> {
             .map(str::to_string)
     } else {
         None
+    }
+}
+
+fn extract_import_name(node: Node, source: &[u8]) -> Option<String> {
+    // Walk identifiers and take the last meaningful segment (imported symbol).
+    let mut last: Option<String> = None;
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        collect_last_identifier(child, source, &mut last);
+    }
+    last
+}
+
+fn collect_last_identifier(node: Node, source: &[u8], last: &mut Option<String>) {
+    if matches!(
+        node.kind(),
+        "identifier" | "type_identifier" | "property_identifier"
+    ) {
+        if let Some(text) = node_text(node, source) {
+            *last = Some(text);
+        }
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        collect_last_identifier(child, source, last);
+    }
+}
+
+fn symbol_kind_label(kind: SymbolKind) -> &'static str {
+    match kind {
+        SymbolKind::Function => "function",
+        SymbolKind::Class => "class",
+        SymbolKind::Method => "method",
+        SymbolKind::Var => "var",
+        SymbolKind::Type => "type",
+        SymbolKind::Module => "module",
     }
 }
 

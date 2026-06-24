@@ -5,9 +5,9 @@ use std::path::Path;
 
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_schema::symbol::{SymbolKind, Visibility};
-use uuid::Uuid;
 
 use crate::error::CoreError;
+use crate::ids::stable_symbol_id;
 use crate::language::Language;
 
 /// Extracts symbols from a source file using lightweight heuristics.
@@ -68,7 +68,19 @@ fn make_symbol(
     visibility: Visibility,
 ) -> SymbolRecord {
     SymbolRecord {
-        id: Uuid::new_v4().to_string(),
+        id: stable_symbol_id(
+            file_path,
+            name,
+            line as u32,
+            match kind {
+                SymbolKind::Function => "function",
+                SymbolKind::Class => "class",
+                SymbolKind::Method => "method",
+                SymbolKind::Var => "var",
+                SymbolKind::Type => "type",
+                SymbolKind::Module => "module",
+            },
+        ),
         kind,
         name: name.to_string(),
         fqn: format!("{file_path}::{name}"),

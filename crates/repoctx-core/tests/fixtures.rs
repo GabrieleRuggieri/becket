@@ -1,6 +1,8 @@
 //! Integration tests against synthetic fixtures under `tests/fixtures/`.
 
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use repoctx_core::{BuildOptions, BuildPipeline};
 use repoctx_query::QueryEngine;
@@ -9,6 +11,46 @@ fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/fixtures")
         .join(name)
+}
+
+fn read_artifacts(root: &Path) -> HashMap<String, String> {
+    let dir = root.join(".repoctx");
+    let mut out = HashMap::new();
+    for name in [
+        "symbols.json",
+        "dependencies.json",
+        "flows.json",
+        "entrypoints.json",
+        "architecture.json",
+    ] {
+        let path = dir.join(name);
+        out.insert(
+            name.to_string(),
+            fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}")),
+        );
+    }
+    out
+}
+
+#[test]
+fn rebuild_produces_byte_identical_artifacts() {
+    let root = fixture_path("monorepo-edges");
+    let options = BuildOptions {
+        incremental: false,
+        no_embeddings: true,
+    };
+
+    BuildPipeline::new(&root, options.clone())
+        .run()
+        .expect("first build");
+    let first = read_artifacts(&root);
+
+    BuildPipeline::new(&root, options)
+        .run()
+        .expect("second build");
+    let second = read_artifacts(&root);
+
+    assert_eq!(first, second, "artifacts must be deterministic across rebuilds");
 }
 
 #[test]
