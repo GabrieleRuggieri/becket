@@ -352,13 +352,10 @@ flowchart LR
   the agent can open the full file if needed.
 - **Budgeting** is greedy by relevance: the most relevant snippet, the symbol's wiki page, and the
   impact set are included first; lower-relevance neighbors fill the remaining budget.
-- **Primary output is markdown** (`--format md`) — one paste-ready file for agents. JSON remains for
-  tooling and MCP structured fields.
-- The bundle is the union of all three layers — *verified structure + meaning + code* — which is what
-  distinguishes RepoCtx from RAG (no persistent meaning) and from a pure wiki (no verified code).
+- **Primary output is markdown** (default) — one paste-ready file for agents. `--json` for tooling.
+- The bundle is the union of all three layers — *verified structure + meaning + code*.
 
-**v0.1 today:** `repoctx context` returns symbol metadata, neighbors, and optional sampling enrichment.
-Full snippet packing and markdown output ship in **v0.2** (BACKLOG P1-11).
+**Shipped (v0.2):** `repoctx context` returns markdown with real snippets, sanitized wiki, impact, and greedy packing to `--budget`. Task modes: `fix`, `refactor`, `onboard`.
 
 ---
 
@@ -528,31 +525,28 @@ Verb-based, scriptable, machine-friendly. Every command supports `--json` for st
 repoctx build [--incremental] [--no-embeddings] [--watch]
 repoctx impact <symbol>   [--depth N] [--json]
 repoctx flow   <domain>   [--json]
-repoctx context <symbol>  [--budget <tokens>] [--format md|json] [--task fix|refactor|onboard] [--json]
-repoctx wiki   sync  [<path|symbol>...]        # v0.2 — author/update grounded pages (MCP host)
-repoctx wiki   lint  [--json]                  # v0.2 — stale/contradictory/orphan pages vs graph
-repoctx wiki   show  <page|symbol>             # v0.2 — print a page (symbol → page)
+repoctx context <symbol>  [--budget <tokens>] [--task fix|refactor|onboard] [--json]
+repoctx wiki   sync  [--all]                    # recompile stale pages (structure; prose preserved)
+repoctx wiki   lint  [--json] [--strict]        # stale / claims / links / orphans vs graph
+repoctx wiki   show  <page|symbol>              # print grounded page
 repoctx domain  rename <auto-id> <name>
 repoctx domain  add    <name> <path|symbol>...
 ```
 
-**Shipped (v0.1):** `build`, `impact`, `flow`, `context` (metadata JSON), `domain`, `workspace build`.
+**Shipped (v0.2):** `build`, `impact`, `flow`, `context` (markdown bundle), `wiki`, `domain`, `workspace build`.
 
-**Planned (v0.2):** `context --format md` with real snippets, full `wiki` subcommands, `get_wiki`.
-
-`context` (v0.2) returns the assembled bundle (code snippets + wiki + impact) packed to `--budget`.
-`wiki sync` requires an MCP host with sampling; structural `wiki lint` runs fully locally.
+`context` returns code snippets + wiki + impact packed to `--budget`. `wiki sync` recompiles graph structure; prose enrichment via MCP `get_wiki enrich=true`.
 
 ### 5.2 MCP contract (primary agent interface)
 JSON-RPC 2.0 over **stdio** (local, no open port by default). Tools mirror the README:
 
-| Tool | Input | Output (token-optimized) | Status |
+| Tool | Input | Output | Status |
 |---|---|---|---|
-| `get_impact` | `{ symbol, depth? }` | affected modules, downstream deps, related tests, risk zones | **v0.1** |
-| `get_flow` | `{ domain }` | end-to-end path, service interactions, external systems | **v0.1** |
-| `get_dependencies` | `{ symbol, direction? }` | direct/transitive dependencies | **v0.1** |
-| `get_context` | `{ symbol, budget?, task?, format? }` | v0.1: metadata + neighbors; v0.2: markdown bundle with snippets + wiki + impact | **partial** |
-| `get_wiki` | `{ page? , symbol? }` | grounded markdown page (or router index), with `stale` flag | **v0.2** |
+| `get_impact` | `{ symbol, depth? }` | affected modules, downstream deps, related tests, risk zones | **shipped** |
+| `get_flow` | `{ domain }` | end-to-end path, service interactions | **shipped** |
+| `get_dependencies` | `{ symbol, depth? }` | direct/transitive dependencies | **shipped** |
+| `get_context` | `{ symbol, budget?, task? }` | markdown bundle: snippets + wiki + impact | **shipped** |
+| `get_wiki` | `{ page?, enrich? }` | grounded markdown page; `enrich` fills prose via sampling | **shipped** |
 
 The server also declares the **`sampling` client capability**: when enrichment **or wiki authoring**
 needs an LLM, it issues a sampling request so the **host agent's model** (e.g. Cursor) runs the
@@ -649,8 +643,8 @@ Every decision below is settled; there are **no open questions** blocking develo
 | 15 | Platforms | **macOS & Linux tier-1** (x64 + arm64, fully CI-tested); **Windows tier-2** (supported & CI-built, issues triaged after tier-1). |
 | 16 | Artifact schema | JSON Schema with `schemaVersion`, SemVer'd independently from the CLI. |
 | 17 | Knowledge model | **Three layers**: Deterministic Core (ground truth) → grounded **Repo Wiki** (markdown, MCP-authored, lazy) → **Context Assembly** (code + wiki + impact, budgeted). The graph **grounds and lints** the wiki. **Wiki-only is out of scope.** |
-| 18 | Context output | `get_context` / `repoctx context` return **real code snippets** (sliced from disk) + grounded wiki + impact within a token budget. Code is never model-generated; only wiki prose is. **v0.1 ships metadata; full bundle in v0.2.** |
-| 19 | Adoption-first delivery | Agents receive **one markdown bundle** per task (`--format md`, `--task fix\|refactor\|onboard`), not multiple tools to orchestrate. Primary workflow: `build` → MCP `get_impact`/`get_context` before edits. |
+| 18 | Context output | `get_context` / `repoctx context` return **real code snippets** + grounded wiki + impact within a token budget. Code is never model-generated. |
+| 19 | Adoption-first delivery | One markdown bundle per task (`--task fix\|refactor\|onboard`). Host agent orchestrates; **no RLM in core** (ADR-0007). |
 
 **v1.1 scope note (additive):** decisions #17–#18 extend, but do not alter, the locked core (#1–#16).
 The Deterministic Core, its determinism guarantees, the "no bundled LLM / MCP-sampling-only" rule, and

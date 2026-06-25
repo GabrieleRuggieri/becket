@@ -98,7 +98,7 @@ impl FlowReconstructor {
             .into_iter()
             .enumerate()
             .map(|(order, symbol_id)| FlowStepRecord {
-                order: order as u32,
+                order: (order as u32) + 1,
                 symbol_id,
                 external_system: None,
             })

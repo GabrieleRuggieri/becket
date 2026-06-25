@@ -10,6 +10,7 @@ Decisioni architetturali significative per RepoCtx. Ogni ADR è immutabile una v
 | [0004](./0004-cargo-dist-distribution.md) | Distribuzione con cargo-dist | Accettato |
 | [0005](./0005-deterministic-artifact-ids.md) | ID deterministici e artifact byte-identici | Accettato |
 | [0006](./0006-grounded-knowledge-wiki.md) | Knowledge Layer (Repo Wiki) + Context Assembly | Accettato |
+| [0007](./0007-no-rlm-in-core.md) | Nessun RLM nel core; host agent come orchestratore | Accettato |
 
 ## Template per nuovi ADR
 

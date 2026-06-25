@@ -26,8 +26,8 @@
 |---|---|---|---|
 | P1-5 | Distribuzione | `cargo-dist`, release CI, npm/homebrew | ✅ infra pronta |
 | P1-R1 | Release | Tag **v0.1.0** + tap Homebrew + smoke test install | Blocca “uso reale” |
-| P1-R2 | Docs | Guida **“Use today”** in README: build → impact → MCP in Cursor | Workflow 3 passi |
-| P1-R3 | MCP | Esempio config Cursor / Claude Code (`repoctx-mcp`, `REPOCTX_ROOT`) | Copy-paste in README |
+| P1-R2 | Docs | Guida **“Use today”** in README: build → impact → MCP in Cursor | ✅ |
+| P1-R3 | MCP | Esempio config Cursor / Claude Code (`repoctx-mcp`, `REPOCTX_ROOT`) | ✅ |
 | P1-R4 | DX | `repoctx context` migliora output **oggi**: symbol + file:line + related + `--json` stabile | ✅ |
 
 ## P1 — Knowledge Layer v0.2 (bundle unico, non LLM Wiki clone)
@@ -66,7 +66,7 @@
 |---|---|---|---|
 | P2-1 | Plugins | Grammar registry | ✅ |
 | P2-2 | Docs | CONTRIBUTING.md | ✅ |
-| P2-3 | ADR | ADR 0001–0006 | ✅ |
+| P2-3 | ADR | ADR 0001–0007 | ✅ |
 | P2-4 | Windows | Tier-2 CI | ✅ |
 | P2-5 | Wiki | Router ibrido BM25+vec se wiki > ~200 pagine | Dopo P1-8 |
 | P2-6 | Wiki | Semantic lint opzionale (prosa ambigua) via sampling | Dopo P1-10 |

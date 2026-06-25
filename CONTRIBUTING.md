@@ -42,7 +42,7 @@ REPOCTX_HASH_EMBED=1 cargo test --all
 | Crate | Role |
 |---|---|
 | `repoctx-cli` | CLI (`repoctx build`, `workspace build`, `wiki`, queries) |
-| `repoctx-core` | Build pipeline, parsing, graph, workspace linker, wiki compiler (planned) |
+| `repoctx-core` | Build pipeline, parsing, graph, workspace linker, **wiki compiler + linter** |
 | `repoctx-store` | SQLite index + JSON artifacts |
 | `repoctx-query` | Shared query engine for CLI and MCP |
 | `repoctx-schema` | Versioned artifact types + JSON Schema |
@@ -51,16 +51,15 @@ REPOCTX_HASH_EMBED=1 cargo test --all
 
 See [CODEMAP.md](./CODEMAP.md) and [ARCHITECTURE.md](./ARCHITECTURE.md) for execution flow and design decisions.
 
-**Product direction (v1.1):** RepoCtx combines a deterministic code graph with a **graph-grounded knowledge wiki** and **context assembly** that returns real code snippets for agents. See [ADR-0006](./docs/adr/0006-grounded-knowledge-wiki.md). Open implementation tasks are in [BACKLOG.md](./BACKLOG.md) (P1-8 … P1-15).
+**Product direction (v0.2):** deterministic graph + graph-grounded wiki + context assembly (markdown bundle). See [ADR-0006](./docs/adr/0006-grounded-knowledge-wiki.md) and [ADR-0007](./docs/adr/0007-no-rlm-in-core.md). Open items: [BACKLOG.md](./BACKLOG.md) (P1-15 release tag, P2 scale).
 
 ## Adoption workflow (for contributors testing the tool)
 
 1. `cargo install repoctx-cli repoctx-mcp --locked` (or build from source)
 2. `repoctx build` in a fixture repo or this monorepo
-3. `repoctx impact <Symbol>` and `repoctx flow <domain>` — verify output
-4. Wire `repoctx-mcp` in Cursor (see README MCP config) and confirm `get_impact` works
-
-North star for v0.2: `repoctx context X --format md --task fix` → one markdown bundle per agent call.
+3. `repoctx context <Symbol> --budget 6000 --task fix` — verify markdown bundle
+4. `repoctx wiki lint --strict` — verify lint passes
+5. Wire `repoctx-mcp` in Cursor (see README) and confirm `get_context` / `get_wiki`
 
 ## Adding a language (tree-sitter plugin)
 
@@ -156,7 +155,7 @@ Maintainers use [cargo-dist](https://axodotdev.github.io/cargo-dist/) — see [p
 
 ```bash
 # bump [workspace.package].version, then:
-git tag v0.1.0 && git push --tags
+git tag v0.2.0 && git push --tags
 ```
 
 CI in `.github/workflows/ci.yml` runs tier-1 checks on Ubuntu and macOS; Windows is tier-2 (see [docs/windows.md](./docs/windows.md)).

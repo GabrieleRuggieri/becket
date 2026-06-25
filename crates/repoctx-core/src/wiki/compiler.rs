@@ -217,9 +217,7 @@ fn render_flow_body(
         let name = sym_name(&step.symbol_id, names);
         md.push_str(&format!(
             "{}. **{}** (`{}`)\n",
-            step.order + 1,
-            name,
-            step.symbol_id
+            step.order, name, step.symbol_id
         ));
         if let Some(ext) = &step.external_system {
             md.push_str(&format!("   - external: {ext}\n"));

@@ -430,3 +430,14 @@ Documentazione allineata a **cosa funziona oggi** (impact, flow, MCP) e **north 
 ### Verificato
 
 - `cargo test --all` + `cargo clippy -D warnings` verdi
+
+---
+
+## 2026-06-25 — Sessione 23: allineamento pre-release + ranking semantico
+
+### Completato
+
+- **Docs allineati**: `ARCHITECTURE.md`, `CODEMAP.md`, `CONTRIBUTING.md`, `BACKLOG.md`
+- **ADR-0007**: no RLM nel core
+- **Context ranking**: semantic neighbors (sqlite-vec) nel greedy pack, non solo post-hoc metadata
+- **Flow steps**: order 1-based nel grafo (non solo display wiki)

@@ -7,6 +7,7 @@ use std::path::Path;
 use repoctx_core::wiki::{
     find_page_for_symbol, sanitize_for_context, wiki_adds_context, WikiStore,
 };
+use repoctx_embed::{embed_with_model, symbol_embedding_text};
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_store::{IndexStore, RepoCtxPaths};
 
@@ -59,6 +60,7 @@ pub fn assemble_context(
         &callers,
         &callees,
         &affected_ids,
+        &semantic_neighbor_ids(store, &root, 5)?,
         &related_components,
     );
     ranked.sort_by_key(|(_, priority)| *priority);
@@ -125,6 +127,8 @@ pub fn assemble_context(
         task,
     });
 
+    let semantic_neighbors = semantic_neighbor_names(store, &root, 5)?;
+
     Ok(ContextResult {
         symbol: root,
         responsibility,
@@ -133,7 +137,7 @@ pub fn assemble_context(
         related_components,
         external_dependencies,
         invariants,
-        semantic_neighbors: Vec::new(),
+        semantic_neighbors,
         snippets,
         callers: caller_names,
         callees: callee_names,
@@ -171,6 +175,7 @@ fn rank_symbols(
     callers: &[String],
     callees: &[String],
     affected: &[String],
+    semantic: &[String],
     related: &[String],
 ) -> Vec<(String, u8)> {
     let mut out = Vec::new();
@@ -181,14 +186,53 @@ fn rank_symbols(
     for id in callees {
         out.push((id.clone(), 2));
     }
-    for id in affected {
+    for id in semantic {
         if id != &root.id {
             out.push((id.clone(), 3));
         }
     }
-    // same-file related names resolved later via related_components only in markdown
+    for id in affected {
+        if id != &root.id {
+            out.push((id.clone(), 4));
+        }
+    }
     let _ = related;
     out
+}
+
+fn semantic_neighbor_ids(
+    store: &IndexStore,
+    symbol: &SymbolRecord,
+    limit: usize,
+) -> Result<Vec<String>, crate::error::QueryError> {
+    if store.count_symbol_embeddings()? == 0 {
+        return Ok(Vec::new());
+    }
+    let query = embed_with_model(&symbol_embedding_text(symbol));
+    let hits = store.nearest_symbol_ids(&query, limit + 1)?;
+    Ok(hits
+        .into_iter()
+        .filter(|(id, _)| id != &symbol.id)
+        .take(limit)
+        .map(|(id, _)| id)
+        .collect())
+}
+
+pub(crate) fn semantic_neighbor_names(
+    store: &IndexStore,
+    symbol: &SymbolRecord,
+    limit: usize,
+) -> Result<Vec<String>, crate::error::QueryError> {
+    let ids = semantic_neighbor_ids(store, symbol, limit)?;
+    let id_to_name: HashMap<_, _> = store
+        .load_symbols()?
+        .into_iter()
+        .map(|s| (s.id, s.name))
+        .collect();
+    Ok(ids
+        .into_iter()
+        .filter_map(|id| id_to_name.get(&id).cloned())
+        .collect())
 }
 
 fn slice_symbol(repo_root: &Path, symbol: &SymbolRecord) -> Option<CodeSnippet> {

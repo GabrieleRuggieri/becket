@@ -9,7 +9,7 @@
 | Binario | Crate | Ruolo |
 |---|---|---|
 | `repoctx` | `repoctx-cli` | CLI developer-facing |
-| `repoctx-mcp` | `repoctx-mcp` | MCP stdio via rmcp (`get_context`, `get_impact`, `get_flow`, `get_dependencies`, `get_wiki` planned) |
+| `repoctx-mcp` | `repoctx-mcp` | MCP stdio (`get_context`, `get_wiki`, `get_impact`, `get_flow`, `get_dependencies`) |
 
 ---
 
@@ -17,95 +17,65 @@
 
 ```
 repoctx-cli::main
-  └─ commands::execute(Build | Workspace)
+  └─ commands::execute(Build | Workspace | Wiki)
        └─ repoctx-core::BuildPipeline::run  (single repo)
        └─ repoctx-core::WorkspacePipeline::run  (multi-repo)
             ├─ BuildPipeline per ogni membro
-            ├─ CrossRepoLinker (HTTP client ↔ server route)
+            ├─ CrossRepoLinker (HTTP / gRPC / queue)
             └─ ArtifactWriter → .repoctx/cross_repo.json
 ```
 
-### `repoctx workspace build`
-
-```
-repoctx-cli::workspace build
-  └─ WorkspacePipeline::run
-       ├─ parse repoctx.workspace.toml
-       ├─ BuildPipeline × N repos
-       ├─ CrossRepoLinker::link
-       └─ .repoctx/cross_repo.json
-```
-
----
-
-## `repoctx build` (dettaglio singolo repo)
+### `repoctx build` (singolo repo)
 
 ```
 repoctx-cli::main
   └─ commands::execute(Build)
        └─ repoctx-core::BuildPipeline::run
-            ├─ FileWalker::discover          # ignore + .repoctxignore
-            ├─ TreeSitterParser::parse_file  # tree-sitter (Rust, Py, TS, JS, Go, Java)
-            ├─ IndexStore::delete_symbols_for_path  # incremental purge
-            ├─ IndexStore::insert_symbol
-            ├─ GraphResolver::resolve_calls  # call edges → DB
-            ├─ FlowReconstructor::reconstruct # flows.json
-            ├─ index_entrypoints (main)      # entrypoints.json
+            ├─ FileWalker::discover
+            ├─ TreeSitterParser::parse_file
+            ├─ IndexStore::delete_symbols_for_path  (incremental)
+            ├─ GraphResolver::resolve_calls
+            ├─ FlowReconstructor::reconstruct
+            ├─ index_entrypoints
+            ├─ index_symbol_embeddings (optional)
             ├─ IndexStore::export_artifacts
-            └─ ArtifactWriter::write_artifact × 5
-                 → .repoctx/symbols.json
-                 → .repoctx/dependencies.json
-                 → .repoctx/flows.json
-                 → .repoctx/entrypoints.json
-                 → .repoctx/architecture.json
-                 + .repoctx/index.db (cache)
+            ├─ ArtifactWriter::write_artifact × 5
+            ├─ WikiCompiler::compile_all
+            └─ WikiLinter::run
+                 → .repoctx/*.json + wiki/*.md + wiki_lint.json + wiki_stale.json
+                 + .repoctx/index.db
 ```
 
 ---
 
-## Query commands (`impact` | `flow` | `context`)
+## Query commands
 
 ```
 repoctx-cli::commands::execute
   └─ repoctx-query::QueryEngine
-       ├─ IndexStore::open (.repoctx/index.db)
-       ├─ find_symbols_by_name / find_flow_by_name
-       └─ downstream_symbols (recursive CTE)
+       ├─ impact / flow / dependencies
+       └─ context → assemble_context
 ```
 
-## Adoption path (v0.1 → v0.2)
-
-| Today (v0.1) | v0.2 (planned) |
-|---|---|
-| `QueryEngine::context` — metadata JSON | `ContextAssembler::assemble` — markdown bundle + snippets |
-| MCP `get_impact`, `get_flow`, `get_dependencies` | MCP `get_wiki`, full `get_context` bundle |
-| `build --watch` incremental | watch → wiki stale queue |
-
-North star: `repoctx context X --format md --task fix` → one file for the agent (ADR-0006).
-
----
-
-### `repoctx context` (v0.2 — Context Assembly; metadata today)
+### `repoctx context` (Context Assembly)
 
 ```
-repoctx-cli::context
-  └─ repoctx-query::ContextAssembler::assemble(symbol, budget)
-       ├─ resolve symbol → graph node
-       ├─ neighborhood (callers/callees BFS) + impact set
-       ├─ rank by edge proximity + embedding similarity
-       ├─ slice source snippets from disk (path + line ranges)
-       ├─ attach grounded wiki page(s) from .repoctx/wiki/
-       └─ greedy pack to token budget → ContextBundle JSON
+repoctx-query::assemble_context(symbol, budget, task)
+  ├─ resolve callers / callees / impact (graph BFS)
+  ├─ semantic_neighbor_ids (sqlite-vec, when embeddings indexed)
+  ├─ rank: root → callers → callees → semantic → affected
+  ├─ slice source snippets from disk (greedy pack to budget)
+  ├─ find_page_for_symbol → sanitize_for_context (wiki)
+  └─ render markdown bundle
 ```
 
-### `repoctx wiki` (planned — Knowledge Layer)
+### `repoctx wiki`
 
 ```
 repoctx-cli::wiki {sync|lint|show}
-  ├─ sync → WikiCompiler::sync_area (MCP sampling, grounded subgraph prompt)
-  │         └─ write .repoctx/wiki/*.md + update graph_fingerprint
-  ├─ lint → WikiLinter::run (deterministic: stale, broken links, edge claims)
-  └─ show  → load page by symbol id or page name
+  ├─ sync → WikiCompiler::sync_pages (selective or --all; preserves enriched prose)
+  ├─ lint → WikiLinter::run → wiki_lint.json + wiki_stale.json
+  └─ show  → WikiStore::load_page / resolve by title or stem
 ```
 
 ---
@@ -116,14 +86,14 @@ repoctx-cli::wiki {sync|lint|show}
 repoctx-mcp::main (tokio)
   └─ server::serve(stdio)
        └─ RepoCtxMcpServer (rmcp tool_router)
-            ├─ get_context  → ContextAssembler::assemble (planned) / QueryEngine::context (today)
-            ├─ get_wiki     → WikiStore::load_page (planned)
+            ├─ get_context  → QueryEngine::context (+ optional sampling enrichment)
+            ├─ get_wiki     → WikiStore + optional enrich_wiki_prose (persists .md)
             ├─ get_impact   → QueryEngine::impact
-            ├─ get_flow     → QueryEngine::flow
+            ├─ get_flow     → QueryEngine::flow (+ optional sampling)
             └─ get_dependencies → QueryEngine::dependencies
 ```
 
-Env: `REPOCTX_ROOT` = percorso repo (default: cwd). Richiede `repoctx build` eseguito prima.
+Env: `REPOCTX_ROOT` (default: cwd). Richiede `repoctx build` prima.
 
 ---
 
@@ -133,9 +103,13 @@ Env: `REPOCTX_ROOT` = percorso repo (default: cwd). Richiede `repoctx build` ese
 flowchart BT
     CLI[repoctx-cli] --> CORE[repoctx-core]
     CLI --> QUERY[repoctx-query]
-    MCP[repoctx-mcp] --> QUERY
+    MCP[repoctx-mcp] --> CORE
+    MCP --> QUERY
+    QUERY --> CORE
     CORE --> STORE[repoctx-store]
     QUERY --> STORE
+    QUERY --> EMBED[repoctx-embed]
+    CORE --> EMBED
     STORE --> SCHEMA[repoctx-schema]
     CORE --> SCHEMA
     QUERY --> SCHEMA
@@ -148,18 +122,15 @@ flowchart BT
 ```
 <repo-root>/
   .repoctx/
-    index.db          # SQLite cache (rebuildable)
+    index.db
     architecture.json
     symbols.json
     dependencies.json
     flows.json
     entrypoints.json
-    wiki/             # (planned) grounded knowledge pages
+    wiki_lint.json
+    wiki_stale.json
+    wiki/
       index.md
       *.md
-
-<workspace-root>/
-  repoctx.workspace.toml
-  .repoctx/
-    cross_repo.json     # workspace-level cross-repo edges
 ```
