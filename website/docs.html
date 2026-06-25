@@ -6,8 +6,8 @@
   <meta name="description" content="Becket Documentation — CLI, MCP, Architecture" />
   <title>Docs — Becket</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css?v=4" as="style" />
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="preload" href="css/styles.css?v=8" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=8" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
@@ -16,6 +16,7 @@
   <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
   <canvas id="particles" aria-hidden="true"></canvas>
   <div class="glow glow-1" aria-hidden="true"></div>
   <div class="glow glow-2" aria-hidden="true"></div>
@@ -26,7 +27,7 @@
         <span class="logo-mark" aria-hidden="true"></span>
         <span>Becket</span>
       </a>
-      <nav class="nav-links">
+      <nav class="nav-links" id="nav-links" aria-label="Documentation">
         <a href="index.html" data-i18n="nav.home">Home</a>
         <a href="#layers" data-i18n="docs.nav.layers">Layers</a>
         <a href="#wiki" data-i18n="docs.nav.wiki">Wiki</a>
@@ -49,7 +50,7 @@
     </div>
   </header>
 
-  <main class="docs-main">
+  <main class="docs-main" id="main-content">
     <div class="container docs-layout">
       <aside class="docs-sidebar glass-card">
         <nav class="docs-toc">
@@ -304,7 +305,7 @@ becket domain add payment src/billing/** PaymentService</code></pre>
       <p class="footer-copy" data-i18n="footer.copy">Open source under Apache-2.0 · 100% local · Zero telemetry</p>
       <div class="footer-links">
         <a href="index.html" data-i18n="nav.home">Home</a>
-        <a href="https://github.com/GabrieleRuggieri/becket" data-i18n="footer.github">GitHub</a>
+        <a href="https://github.com/GabrieleRuggieri/becket" target="_blank" rel="noopener noreferrer" data-i18n="footer.github">GitHub</a>
       </div>
     </div>
   </footer>

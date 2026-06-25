@@ -1,8 +1,10 @@
 const translations = {
   en: {
+    "a11y.skip": "Skip to content",
     "nav.problem": "Problem",
     "nav.solution": "Solution",
     "nav.layers": "Layers",
+    "nav.product": "Product",
     "nav.features": "Features",
     "nav.integrations": "Integrations",
     "nav.docs": "Docs",
@@ -220,9 +222,11 @@ const translations = {
     "docs.install.note": "After install, run becket build in any repository. Zero configuration required.",
   },
   it: {
+    "a11y.skip": "Salta al contenuto",
     "nav.problem": "Problema",
     "nav.solution": "Soluzione",
     "nav.layers": "Layer",
+    "nav.product": "Prodotto",
     "nav.features": "Funzionalità",
     "nav.integrations": "Integrazioni",
     "nav.docs": "Docs",

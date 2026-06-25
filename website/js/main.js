@@ -243,7 +243,14 @@ function initReveal() {
 function initNav() {
   const nav = document.getElementById("nav");
   const burger = document.getElementById("nav-burger");
-  const links = document.querySelector(".nav-links");
+  const links = document.getElementById("nav-links") || document.querySelector(".nav-links");
+
+  const setMenuOpen = (open) => {
+    burger?.classList.toggle("active", open);
+    links?.classList.toggle("open", open);
+    document.body.classList.toggle("nav-open", open);
+    burger?.setAttribute("aria-expanded", open ? "true" : "false");
+  };
 
   let ticking = false;
   window.addEventListener(
@@ -261,18 +268,52 @@ function initNav() {
   );
 
   if (burger && links) {
+    burger.setAttribute("aria-expanded", "false");
     burger.addEventListener("click", () => {
-      burger.classList.toggle("active");
-      links.classList.toggle("open");
+      setMenuOpen(!links.classList.contains("open"));
     });
 
     links.querySelectorAll("a").forEach((a) => {
-      a.addEventListener("click", () => {
-        burger.classList.remove("active");
-        links.classList.remove("open");
-      });
+      a.addEventListener("click", () => setMenuOpen(false));
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
     });
   }
+}
+
+/* ===== Homepage section scroll spy ===== */
+function initScrollSpy() {
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+  if (!navLinks.length) return;
+
+  const sections = [...navLinks]
+    .map((a) => {
+      const id = a.getAttribute("href")?.slice(1);
+      return id ? document.getElementById(id) : null;
+    })
+    .filter(Boolean);
+
+  if (!sections.length) return;
+
+  const setActive = (id) => {
+    navLinks.forEach((a) => {
+      a.classList.toggle("active", a.getAttribute("href") === `#${id}`);
+    });
+  };
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visible[0]) setActive(visible[0].target.id);
+    },
+    { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.15, 0.35] }
+  );
+
+  sections.forEach((s) => observer.observe(s));
 }
 
 /* ===== Docs: Active TOC & Copy ===== */
@@ -333,6 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTyping();
   initReveal();
   initNav();
+  initScrollSpy();
   initDocs();
   initSmoothAnchors();
 });
