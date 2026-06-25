@@ -6,7 +6,7 @@ use becket_core::redact_secrets;
 use becket_core::wiki::{replace_prose_slot, WikiStore, PROSE_SLOT};
 use becket_query::types::{ContextResult, FlowResult, SummarySource};
 use becket_schema::artifacts::FlowRecord;
-use becket_store::{EnrichmentRecord, IndexStore, BecketPaths};
+use becket_store::{BecketPaths, EnrichmentRecord, IndexStore};
 use rmcp::{
     model::{CreateMessageRequestParams, CreateMessageResult, SamplingMessage},
     Peer, RoleServer,

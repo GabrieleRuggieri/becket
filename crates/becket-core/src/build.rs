@@ -6,7 +6,7 @@ use std::path::Path;
 use becket_schema::artifacts::EntrypointRecord;
 use becket_schema::edge::EdgeType;
 use becket_schema::symbol::EntrypointKind;
-use becket_store::{ArtifactWriter, IndexStore, BecketPaths};
+use becket_store::{ArtifactWriter, BecketPaths, IndexStore};
 use tracing::info;
 
 use crate::domain::apply_domain_overrides;

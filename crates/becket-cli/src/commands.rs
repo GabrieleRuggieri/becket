@@ -7,7 +7,7 @@ use becket_core::{
 };
 use becket_query::QueryEngine;
 use becket_schema::wiki::WikiStaleQueue;
-use becket_store::{IndexStore, BecketPaths};
+use becket_store::{BecketPaths, IndexStore};
 use serde::Serialize;
 use std::fs;
 

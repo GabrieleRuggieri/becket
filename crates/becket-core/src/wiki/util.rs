@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use regex::Regex;
 use becket_schema::artifacts::SymbolRecord;
 use becket_schema::wiki::WikiPageKind;
+use regex::Regex;
 
 /// Placeholder text shown before MCP prose enrichment.
 pub const PROSE_PLACEHOLDER: &str =

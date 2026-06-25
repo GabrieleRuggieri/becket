@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use becket_schema::artifacts::{FlowRecord, ModuleRecord, SymbolRecord};
 use becket_schema::wiki::{WikiPageKind, WikiPageMeta, WikiPageSource};
-use becket_store::{IndexStore, BecketPaths};
+use becket_store::{BecketPaths, IndexStore};
 
 use crate::error::CoreError;
 use crate::wiki::fingerprint::subgraph_fingerprint;

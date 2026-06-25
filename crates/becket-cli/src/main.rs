@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand, ValueEnum};
 use becket_query::ContextTask;
+use clap::{Parser, Subcommand, ValueEnum};
 use tracing_subscriber::EnvFilter;
 
 /// Local intelligence layer for codebases — build, query, and export AI-ready context.

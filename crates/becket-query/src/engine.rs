@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use becket_schema::artifacts::SymbolRecord;
-use becket_store::{IndexStore, BecketPaths};
+use becket_store::{BecketPaths, IndexStore};
 
 use crate::assemble::assemble_context;
 use crate::error::QueryError;

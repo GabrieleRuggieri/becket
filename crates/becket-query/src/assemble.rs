@@ -4,12 +4,10 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use becket_core::wiki::{
-    find_page_for_symbol, sanitize_for_context, wiki_adds_context, WikiStore,
-};
+use becket_core::wiki::{find_page_for_symbol, sanitize_for_context, wiki_adds_context, WikiStore};
 use becket_embed::{embed_with_model, symbol_embedding_text};
 use becket_schema::artifacts::SymbolRecord;
-use becket_store::{IndexStore, BecketPaths};
+use becket_store::{BecketPaths, IndexStore};
 
 use crate::types::{CodeSnippet, ContextResult, ContextTask, SummarySource};
 

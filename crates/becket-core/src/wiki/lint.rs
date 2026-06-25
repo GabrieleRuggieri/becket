@@ -3,9 +3,9 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-use regex::Regex;
 use becket_schema::wiki::{WikiClaimError, WikiLinkError, WikiLintArtifact, WikiStaleQueue};
-use becket_store::{IndexStore, BecketPaths};
+use becket_store::{BecketPaths, IndexStore};
+use regex::Regex;
 
 use crate::error::CoreError;
 use crate::wiki::fingerprint::subgraph_fingerprint;

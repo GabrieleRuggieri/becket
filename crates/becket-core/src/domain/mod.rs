@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use becket_schema::artifacts::FlowRecord;
-use becket_store::{DomainOverride, IndexStore, BecketPaths};
+use becket_store::{BecketPaths, DomainOverride, IndexStore};
 
 use crate::error::CoreError;
 use crate::flow::{CallEdge, FlowReconstructor};
