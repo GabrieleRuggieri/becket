@@ -6,8 +6,8 @@
   <meta name="description" content="RepoCtx Documentation — CLI, MCP, Architecture" />
   <title>Docs — RepoCtx</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css" as="style" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="preload" href="css/styles.css?v=4" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=4" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
@@ -23,7 +23,7 @@
   <header class="nav" id="nav">
     <div class="nav-inner container">
       <a href="index.html" class="logo">
-        <span class="logo-icon"></span>
+        <span class="logo-mark" aria-hidden="true"></span>
         <span>RepoCtx</span>
       </a>
       <nav class="nav-links">
@@ -74,7 +74,7 @@
 
         <section id="layers" class="doc-section reveal">
           <h2 data-i18n="docs.layers.title">Three Knowledge Layers</h2>
-          <p data-i18n="docs.layers.desc">RepoCtx goes beyond plain LLM Wiki or RAG by grounding every knowledge page in a deterministic graph and verifying pages against live code.</p>
+          <p data-i18n="docs.layers.desc">RepoCtx indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).</p>
           <div class="arch-stack">
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l3">Context Assembly</span><span data-i18n="docs.layers.l3d">Code snippets + wiki + impact, token-budgeted</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l2">Grounded Repo Wiki</span><span data-i18n="docs.layers.l2d">Markdown pages anchored to symbol IDs, MCP-authored, lint-checked</span></div>
@@ -142,7 +142,7 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
 
         <section id="wiki" class="doc-section reveal">
           <h2 data-i18n="docs.wiki.title">Grounded Repo Wiki</h2>
-          <p data-i18n="docs.wiki.desc">Unlike a plain LLM Wiki, every page is anchored to real symbol IDs from the deterministic graph. Pages compound over time but are verified — stale claims are flagged automatically.</p>
+          <p data-i18n="docs.wiki.desc">Markdown pages for modules, services, and flows — each anchored to real symbol IDs from the deterministic graph. Structure is compiled from the graph; optional prose (intent & gotchas) via MCP. Stale claims are flagged automatically.</p>
           <ul class="check-list docs-check">
             <li data-i18n="docs.wiki.li1">Pages authored lazily via MCP sampling (host model, no bundled LLM)</li>
             <li data-i18n="docs.wiki.li2">graph_fingerprint detects when anchored code changed</li>
@@ -298,7 +298,7 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
   <footer class="footer">
     <div class="container footer-inner">
       <div class="footer-brand">
-        <span class="logo-icon"></span>
+        <span class="logo-mark" aria-hidden="true"></span>
         <span>RepoCtx</span>
       </div>
       <p class="footer-copy" data-i18n="footer.copy">Open source under Apache-2.0 · 100% local · Zero telemetry</p>

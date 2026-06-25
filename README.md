@@ -12,7 +12,7 @@ Instead of treating a repository as a collection of files, RepoCtx maintains thr
 2. **Knowledge Layer (Repo Wiki)** — a persistent, compounding set of markdown pages (module/service/flow/concept) that explain *intent, conventions and gotchas*. Pages are **anchored to real symbols** and authored lazily by the host agent's model (via MCP sampling) — never re-derived from scratch.
 3. **Context Assembly** — on a query, RepoCtx returns the relevant **wiki page + actual code snippets + impact set**, packed within a token budget. This is the "code in context" layer.
 
-The deterministic core is what makes the wiki trustworthy: because RepoCtx knows the real call graph, it can **ground** page generation and **lint** pages against the code (flagging stale or contradictory claims). A plain LLM wiki cannot verify itself; RepoCtx can.
+The deterministic core keeps the wiki trustworthy: RepoCtx derives the real call graph from source, **grounds** wiki pages on symbol IDs, and **lints** claims against the live graph so stale or wrong relationships are flagged automatically.
 
 It acts as a bridge between:
 - Large codebases
@@ -132,26 +132,64 @@ It builds a persistent representation of:
 
 ---
 
-## Core Idea
+## What RepoCtx does
 
-Two patterns dominate "codebase memory" today, and each has a hole:
+RepoCtx is a **local intelligence layer for codebases**. It indexes your repository once, keeps a **persistent memory** under `.repoctx/`, and answers agent-ready queries with verified structure, optional human-readable wiki prose, and **real source snippets** — packed to your token budget.
 
-- **RAG / pure retrieval** re-derives context on every query, struggles with code chunking, and has no persistent understanding.
-- **LLM Wiki** (persistent markdown knowledge) compounds over time but **cannot verify itself** — it drifts from the code and hallucinates relationships.
+### The problem
 
-RepoCtx combines them and closes both holes:
+When an AI agent (or a developer) works on a large repo, four things go wrong:
 
-> "Here is a *deterministically verified* understanding of the repository, a *compounding wiki* grounded in that verification, and the *exact code* you need — within your token budget."
+1. **Too much code** — you cannot fit the whole tree in the context window.
+2. **No system view** — local snippets are not enough; callers, flows, and modules matter.
+3. **No impact awareness** — a small change can break distant code nobody thought to load.
+4. **No durable memory** — every session re-discovers the same architecture from scratch.
 
-Instead of asking an AI to "read this repository and understand it", or trusting a wiki that may be stale, RepoCtx gives the agent:
+RepoCtx addresses all four with one local index and one query surface.
 
-- **verified structure** (the graph never guesses),
-- **persistent meaning** (the wiki, grounded and lint-checked against the graph),
-- **the right code** (snippets assembled per query, not the whole repo).
+### How it works
 
-This reduces token usage, hallucinations and context-rebuilding cost, while increasing accuracy, consistency and speed of reasoning.
+```
+your repo  →  repoctx build  →  .repoctx/ (graph + wiki)
+                                      ↓
+              repoctx context | impact | flow | wiki …
+                                      ↓
+                         markdown bundle for agents
+```
 
-> **Out of scope:** a *wiki-only* tool (markdown without a verifying graph). RepoCtx's value is precisely the graph-grounded verification underneath the wiki.
+1. **`repoctx build`** — walks and parses the repo (tree-sitter). Builds symbols, call graph, flows, entrypoints, impact maps, and grounded wiki pages. **No LLM required.**
+2. **Persistent memory** — JSON artifacts + `.repoctx/wiki/*.md` survive across sessions. Incremental rebuild on `build --watch`; wiki pages get stale fingerprints when anchored symbols change.
+3. **Per-task queries** — `context`, `impact`, `flow`, and MCP tools return what you need *now*, not the whole repo.
+
+### Capabilities
+
+| Capability | What you get |
+|---|---|
+| **Code graph** | Symbols, dependencies, call edges, entrypoints — measured from source, reproducible |
+| **Impact analysis** | Downstream callers and modules affected by a change |
+| **Flow reconstruction** | End-to-end paths across services (e.g. `payment` → handler → client → queue) |
+| **Grounded wiki** | Module / service / flow pages anchored to symbol IDs; structure from the graph |
+| **Wiki lint** | Stale pages, broken claims, orphan links — deterministic checks vs live graph; `--strict` for CI |
+| **Context assembly** | One markdown bundle: wiki + ranked code snippets + impact, within `--budget` and `--task` |
+| **MCP server** | `get_context`, `get_wiki`, `get_impact`, `get_flow`, `get_dependencies` for Cursor / Claude Code |
+| **Workspace mode** | Cross-repo linking (HTTP, gRPC, queues) for monorepos and polyrepos |
+
+### Typical workflows
+
+**Before fixing a bug** — agent calls `get_context` on the failing symbol with `--task fix`: callers, relevant snippets, impact depth 2, wiki gotchas.
+
+**Before a refactor** — `repoctx impact SymbolName` (or MCP `get_impact`) to see blast radius; `wiki lint --strict` in CI so docs do not lie about call relationships.
+
+**Onboarding** — `repoctx flow <domain>` plus `context` with `--task onboard` for flows and overview with fewer snippets.
+
+**Enriching intent** — MCP `get_wiki` with `enrich=true` fills prose slots (intent & gotchas) using the host model; structure stays graph-compiled.
+
+### Design principles
+
+- **Local-first** — no cloud, no telemetry, no API keys in the core path
+- **Graph is ground truth** — wiki structure and lint claims come from the deterministic core
+- **Code is never generated** — snippets are sliced from disk; only optional wiki prose is model-authored
+- **One call for agents** — north star: `get_context` → single markdown bundle, not manual file `@` juggling
 
 ---
 

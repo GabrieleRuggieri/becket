@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 1 68 78" role="img">
+  <title>RepoCtx</title>
+  <desc>RepoCtx icon — hexagonal mark, orange</desc>
+
+  <!-- outer hex R=36, center 40,40 flat-top -->
+  <!-- p: T(40,4) TR(71,22) BR(71,58) B(40,76) BL(9,58) TL(9,22) -->
+  <polygon
+    points="40,4 71,22 71,58 40,76 9,58 9,22"
+    fill="none"
+    stroke="#E8640A"
+    stroke-width="2"/>
+
+  <!-- inner hex R=22 -->
+  <!-- p: T(40,18) TR(59,29) BR(59,51) B(40,62) BL(21,51) TL(21,29) -->
+  <polygon
+    points="40,18 59,29 59,51 40,62 21,51 21,29"
+    fill="none"
+    stroke="#E8640A"
+    stroke-width="1.5"/>
+
+  <!-- connectors outer→inner vertex -->
+  <line x1="40" y1="4"  x2="40" y2="18" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+  <line x1="71" y1="22" x2="59" y2="29" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+  <line x1="71" y1="58" x2="59" y2="51" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+  <line x1="40" y1="76" x2="40" y2="62" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+  <line x1="9"  y1="58" x2="21" y2="51" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+  <line x1="9"  y1="22" x2="21" y2="29" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+
+  <!-- outer corner nodes -->
+  <circle cx="40" cy="4"  r="3" fill="#E8640A"/>
+  <circle cx="71" cy="22" r="3" fill="#E8640A"/>
+  <circle cx="71" cy="58" r="3" fill="#E8640A"/>
+  <circle cx="40" cy="76" r="3" fill="#E8640A"/>
+  <circle cx="9"  cy="58" r="3" fill="#E8640A"/>
+  <circle cx="9"  cy="22" r="3" fill="#E8640A"/>
+
+  <!-- precision ring -->
+  <circle cx="40" cy="40" r="12" fill="none" stroke="#E8640A" stroke-width="1" stroke-opacity="0.45"/>
+
+  <!-- center ground-truth dot -->
+  <circle cx="40" cy="40" r="6" fill="#E8640A"/>
+</svg>

@@ -6,8 +6,8 @@
   <meta name="description" content="RepoCtx — verified code graph + grounded knowledge wiki + context assembly for AI coding agents" />
   <title>RepoCtx — AI Context & Impact Engine</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css" as="style" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="preload" href="css/styles.css?v=4" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=4" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
@@ -23,7 +23,7 @@
   <header class="nav" id="nav">
     <div class="nav-inner container">
       <a href="index.html" class="logo">
-        <span class="logo-icon"></span>
+        <span class="logo-mark" aria-hidden="true"></span>
         <span>RepoCtx</span>
       </a>
       <nav class="nav-links">
@@ -172,7 +172,7 @@
       <div class="section-header reveal">
         <span class="section-tag" data-i18n="layers.tag">Architecture</span>
         <h2 data-i18n="layers.title">Three layers, one memory system</h2>
-        <p data-i18n="layers.sub">Better than a plain LLM Wiki: every page is anchored to verified symbols and lint-checked against the live graph.</p>
+        <p data-i18n="layers.sub">Structure from the graph, meaning in the wiki, code in the bundle — three layers that answer what is true, what it means, and what you need right now.</p>
       </div>
       <div class="layers-grid">
         <article class="layer-card glass-card reveal" data-delay="0">
@@ -195,51 +195,34 @@
         </article>
       </div>
       <div class="compare-wrap reveal" data-delay="300">
-        <p class="compare-note muted" data-i18n="layers.cmp.note">Comparison at full v1.1 vision (graph + grounded wiki + context assembly).</p>
-        <div class="table-wrap glass-card">
-          <table class="compare-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th data-i18n="layers.cmp.rag">RAG</th>
-                <th data-i18n="layers.cmp.wiki">LLM Wiki</th>
-                <th data-i18n="layers.cmp.repoctx">RepoCtx</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td data-i18n="layers.cmp.r1">Compounding knowledge (wiki)</td>
-                <td>—</td>
-                <td>✓</td>
-                <td>✓</td>
-              </tr>
-              <tr>
-                <td data-i18n="layers.cmp.r2">Structure verified from code (AST/graph)</td>
-                <td>—</td>
-                <td>—</td>
-                <td>✓</td>
-              </tr>
-              <tr>
-                <td data-i18n="layers.cmp.r3">Source snippets in query response</td>
-                <td>✓</td>
-                <td>—</td>
-                <td>✓</td>
-              </tr>
-              <tr>
-                <td data-i18n="layers.cmp.r4">Wiki lint vs live code graph</td>
-                <td>—</td>
-                <td>—</td>
-                <td>✓</td>
-              </tr>
-              <tr>
-                <td data-i18n="layers.cmp.r5">Impact analysis (what breaks)</td>
-                <td>—</td>
-                <td>—</td>
-                <td>✓</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="section-header" style="margin-top: 2rem;">
+          <span class="section-tag" data-i18n="product.tag">The product</span>
+          <h2 data-i18n="product.title">Everything an agent needs from your repo</h2>
+          <p data-i18n="product.sub">One local index. Persistent memory. Query-ready bundles — no re-reading the whole codebase every session.</p>
         </div>
+        <div class="features-grid">
+          <article class="feature glass-card">
+            <div class="feature-num">→</div>
+            <h3 data-i18n="product.p1.title">Index once</h3>
+            <p data-i18n="product.p1.desc"><code>repoctx build</code> parses symbols, calls, flows, and impact. Writes <code>.repoctx/</code> — no LLM required.</p>
+          </article>
+          <article class="feature glass-card">
+            <div class="feature-num">→</div>
+            <h3 data-i18n="product.p2.title">Memory persists</h3>
+            <p data-i18n="product.p2.desc">Graph JSON + grounded wiki pages survive across agent sessions. Incremental rebuild on watch; stale wiki flagged automatically.</p>
+          </article>
+          <article class="feature glass-card">
+            <div class="feature-num">→</div>
+            <h3 data-i18n="product.p3.title">Query per task</h3>
+            <p data-i18n="product.p3.desc"><code>context</code>, <code>impact</code>, <code>flow</code>, MCP tools — real snippets + wiki + blast radius, token-budgeted.</p>
+          </article>
+        </div>
+        <ul class="check-list" style="margin-top: 1.5rem; max-width: 42rem; margin-left: auto; margin-right: auto;">
+          <li data-i18n="product.li1">Impact before you commit — see what breaks downstream</li>
+          <li data-i18n="product.li2">Wiki lint in CI — claims checked against the live call graph</li>
+          <li data-i18n="product.li3">MCP <code>get_context</code> — one markdown bundle for Cursor / Claude Code</li>
+          <li data-i18n="product.li4">Cross-repo workspace linking for monorepos and polyrepos</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -320,7 +303,7 @@
   <footer class="footer">
     <div class="container footer-inner">
       <div class="footer-brand">
-        <span class="logo-icon"></span>
+        <span class="logo-mark" aria-hidden="true"></span>
         <span>RepoCtx</span>
       </div>
       <p class="footer-copy" data-i18n="footer.copy">Open source under Apache-2.0 · 100% local · Zero telemetry</p>

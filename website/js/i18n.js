@@ -52,7 +52,7 @@ const translations = {
     "layers.tag": "Architecture",
     "layers.title": "Three layers, one memory system",
     "layers.sub":
-      "Better than a plain LLM Wiki: every page is anchored to verified symbols and lint-checked against the live graph.",
+      "Structure from the graph, meaning in the wiki, code in the bundle — three layers that answer what is true, what it means, and what you need right now.",
     "layers.l1.title": "Deterministic Core",
     "layers.l1.q": "What is true?",
     "layers.l1.desc":
@@ -65,15 +65,23 @@ const translations = {
     "layers.l3.q": "What code do I need now?",
     "layers.l3.desc":
       "Real source snippets + wiki page + impact set, ranked and packed to your token budget. Code is never model-generated.",
-    "layers.cmp.note": "RepoCtx unifies verified structure, compounding knowledge, and real code in one query.",
-    "layers.cmp.rag": "RAG",
-    "layers.cmp.wiki": "LLM Wiki",
-    "layers.cmp.repoctx": "RepoCtx",
-    "layers.cmp.r1": "Compounding knowledge (wiki)",
-    "layers.cmp.r2": "Structure verified from code (AST/graph)",
-    "layers.cmp.r3": "Source snippets in query response",
-    "layers.cmp.r4": "Wiki lint vs live code graph",
-    "layers.cmp.r5": "Impact analysis (what breaks)",
+    "product.tag": "The product",
+    "product.title": "Everything an agent needs from your repo",
+    "product.sub":
+      "One local index. Persistent memory. Query-ready bundles — no re-reading the whole codebase every session.",
+    "product.p1.title": "Index once",
+    "product.p1.desc":
+      "repoctx build parses symbols, calls, flows, and impact. Writes .repoctx/ — no LLM required.",
+    "product.p2.title": "Memory persists",
+    "product.p2.desc":
+      "Graph JSON + grounded wiki pages survive across agent sessions. Incremental rebuild on watch; stale wiki flagged automatically.",
+    "product.p3.title": "Query per task",
+    "product.p3.desc":
+      "context, impact, flow, MCP tools — real snippets + wiki + blast radius, token-budgeted.",
+    "product.li1": "Impact before you commit — see what breaks downstream",
+    "product.li2": "Wiki lint in CI — claims checked against the live call graph",
+    "product.li3": "MCP get_context — one markdown bundle for Cursor / Claude Code",
+    "product.li4": "Cross-repo workspace linking for monorepos and polyrepos",
     "features.tag": "Key Features",
     "features.title": "Built for precision, not guesswork",
     "features.f1.title": "Deterministic Code Graph",
@@ -120,7 +128,7 @@ const translations = {
       "RepoCtx is a local intelligence layer that combines a verified code graph, a graph-grounded knowledge wiki, and context assembly that returns real source snippets for AI agents and developers.",
     "docs.layers.title": "Three Knowledge Layers",
     "docs.layers.desc":
-      "RepoCtx goes beyond plain LLM Wiki or RAG by grounding every knowledge page in a deterministic graph and verifying pages against live code.",
+      "RepoCtx indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).",
     "docs.layers.l1": "Deterministic Core",
     "docs.layers.l1d": "Symbols, graph, flows, impact — from tree-sitter, no LLM",
     "docs.layers.l2": "Grounded Repo Wiki",
@@ -146,7 +154,7 @@ const translations = {
       "Zero-config by default. Refine auto-discovered domains via CLI — no config file required.",
     "docs.wiki.title": "Grounded Repo Wiki",
     "docs.wiki.desc":
-      "Unlike a plain LLM Wiki, every page is anchored to real symbol IDs from the deterministic graph. Pages compound over time but are verified — stale claims are flagged automatically.",
+      "Markdown pages for modules, services, and flows — each anchored to real symbol IDs from the deterministic graph. Structure is compiled from the graph; optional prose (intent & gotchas) via MCP. Stale claims are flagged automatically.",
     "docs.wiki.li1": "Pages authored lazily via MCP sampling (host model, no bundled LLM)",
     "docs.wiki.li2": "graph_fingerprint detects when anchored code changed",
     "docs.wiki.li3": "wiki lint compares page claims to live edges",
@@ -264,7 +272,7 @@ const translations = {
     "layers.tag": "Architettura",
     "layers.title": "Tre layer, un sistema di memoria",
     "layers.sub":
-      "Meglio di una LLM Wiki pura: ogni pagina è ancorata a simboli verificati e controllata dal grafo live.",
+      "Struttura dal grafo, significato nella wiki, codice nel bundle — tre layer per cosa è vero, cosa significa e cosa ti serve adesso.",
     "layers.l1.title": "Core Deterministico",
     "layers.l1.q": "Cosa è vero?",
     "layers.l1.desc":
@@ -277,15 +285,23 @@ const translations = {
     "layers.l3.q": "Che codice mi serve ora?",
     "layers.l3.desc":
       "Snippet reali + pagina wiki + impact set, classificati e impacchettati nel budget token. Il codice non è mai generato dal modello.",
-    "layers.cmp.note": "RepoCtx unifica struttura verificata, conoscenza compounding e codice reale in una query.",
-    "layers.cmp.rag": "RAG",
-    "layers.cmp.wiki": "LLM Wiki",
-    "layers.cmp.repoctx": "RepoCtx",
-    "layers.cmp.r1": "Conoscenza compounding (wiki)",
-    "layers.cmp.r2": "Struttura verificata dal codice (AST/grafo)",
-    "layers.cmp.r3": "Snippet di sorgente nella risposta",
-    "layers.cmp.r4": "Wiki lint vs grafo del codice live",
-    "layers.cmp.r5": "Analisi d'impatto (cosa si rompe)",
+    "product.tag": "Il prodotto",
+    "product.title": "Tutto ciò che un agente serve dal tuo repo",
+    "product.sub":
+      "Un indice locale. Memoria persistente. Bundle pronti per query — senza rileggere tutto il codebase ogni sessione.",
+    "product.p1.title": "Indicizza una volta",
+    "product.p1.desc":
+      "repoctx build analizza simboli, call, flussi e impact. Scrive .repoctx/ — senza LLM.",
+    "product.p2.title": "Memoria che resta",
+    "product.p2.desc":
+      "JSON del grafo + pagine wiki ancorate tra le sessioni. Rebuild incrementale in watch; wiki stale segnalata automaticamente.",
+    "product.p3.title": "Query per task",
+    "product.p3.desc":
+      "context, impact, flow, tool MCP — snippet reali + wiki + blast radius, nel budget token.",
+    "product.li1": "Impact prima del commit — vedi cosa si rompe a valle",
+    "product.li2": "Wiki lint in CI — claim verificati sul call graph live",
+    "product.li3": "MCP get_context — un bundle markdown per Cursor / Claude Code",
+    "product.li4": "Workspace cross-repo per monorepo e polyrepo",
     "features.tag": "Funzionalità Chiave",
     "features.title": "Costruito per la precisione, non per indovinare",
     "features.f1.title": "Grafo Deterministico",
@@ -331,7 +347,7 @@ const translations = {
       "RepoCtx è un layer di intelligenza locale che combina grafo verificato, wiki ancorata al grafo e context assembly con snippet di sorgente reali per agenti AI e sviluppatori.",
     "docs.layers.title": "Tre Layer di Conoscenza",
     "docs.layers.desc":
-      "RepoCtx va oltre LLM Wiki o RAG puri ancorando ogni pagina a un grafo deterministico e verificandola contro il codice live.",
+      "RepoCtx indicizza il codebase in locale ed espone tre layer coordinati: grafo deterministico (ground truth), wiki ancorata ai simboli (intent e gotcha), context assembly (snippet reali nel budget token).",
     "docs.layers.l1": "Core Deterministico",
     "docs.layers.l1d": "Simboli, grafo, flussi, impact — da tree-sitter, senza LLM",
     "docs.layers.l2": "Repo Wiki Ancorata",
@@ -355,7 +371,7 @@ const translations = {
     "docs.cli.domain.desc": "Zero-config di default. Affina i domini via CLI.",
     "docs.wiki.title": "Repo Wiki Ancorata",
     "docs.wiki.desc":
-      "A differenza di una LLM Wiki pura, ogni pagina è ancorata a symbol ID reali. Le pagine si arricchiscono ma sono verificate.",
+      "Pagine markdown per moduli, servizi e flussi — ciascuna ancorata a symbol ID reali dal grafo deterministico. La struttura è compilata dal grafo; prosa opzionale (intent e gotcha) via MCP. Claim stale segnalati automaticamente.",
     "docs.wiki.li1": "Pagine via MCP sampling (modello host, nessun LLM bundled)",
     "docs.wiki.li2": "graph_fingerprint rileva quando il codice ancorato cambia",
     "docs.wiki.li3": "wiki lint confronta le affermazioni con gli edge live",
