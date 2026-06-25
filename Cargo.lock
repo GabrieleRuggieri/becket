@@ -238,7 +238,7 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "becket-cli"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "becket-core",
@@ -257,7 +257,7 @@ dependencies = [
 
 [[package]]
 name = "becket-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "becket-embed",
@@ -284,7 +284,7 @@ dependencies = [
 
 [[package]]
 name = "becket-embed"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "becket-schema",
  "dirs",
@@ -295,7 +295,7 @@ dependencies = [
 
 [[package]]
 name = "becket-mcp"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "becket-core",
@@ -314,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "becket-query"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "becket-core",
@@ -330,7 +330,7 @@ dependencies = [
 
 [[package]]
 name = "becket-schema"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "jsonschema",
  "schemars",
@@ -342,7 +342,7 @@ dependencies = [
 
 [[package]]
 name = "becket-store"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "becket-schema",

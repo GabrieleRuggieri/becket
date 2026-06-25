@@ -4,10 +4,13 @@ All notable changes to Becket are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-26
+
 ### Changed
 
 - Distribution: npm only for package-manager publish (Homebrew tap removed); shell installer and GitHub Releases unchanged
 - Docs: removed `cargo install` / crates.io as an install channel; contributors build from a clone
+- Website: homepage hero shows `npx becket build` as the install command
 
 ## [0.2.1] - 2025-06-25
 
@@ -50,6 +53,7 @@ All notable changes to Becket are documented here. The format follows [Keep a Ch
 - Local SQLite index and versioned JSON artifacts under `.becket/`
 - tree-sitter parsing for Rust, TypeScript/JavaScript, Python, Go, Java
 
+[0.2.2]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.2.2
 [0.2.1]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.2.1
 [0.2.0]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.2.0
 [0.1.0]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.1.0
