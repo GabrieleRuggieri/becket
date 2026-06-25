@@ -45,6 +45,11 @@ jobs:
       - name: Build release
         run: cargo build --release --bin becket
 
+      - name: Security audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+
   windows-tier2:
     name: Tier-2 (windows-latest)
     runs-on: windows-latest

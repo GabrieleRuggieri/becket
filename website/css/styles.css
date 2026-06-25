@@ -9,7 +9,7 @@
   --border-strong: rgba(255, 255, 255, 0.14);
   --text: #f0f0f5;
   --text-muted: #8b8b9e;
-  --text-dim: #5c5c6e;
+  --text-dim: #707085;
   --accent: #f97316;
   --accent-light: #fbbf24;
   --accent-glow: rgba(249, 115, 22, 0.35);
@@ -83,6 +83,18 @@ code, pre { font-family: "JetBrains Mono", monospace; }
 
 .skip-link:focus {
   top: 1rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .container {
@@ -227,6 +239,10 @@ code, pre { font-family: "JetBrains Mono", monospace; }
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.nav-links .nav-cta-mobile {
+  display: none;
 }
 
 .nav-burger {
@@ -465,12 +481,11 @@ body.nav-open {
 .section {
   position: relative;
   z-index: 1;
-  min-height: 100dvh;
   padding: var(--section-pad) 0;
   display: grid;
   align-content: center;
   content-visibility: auto;
-  contain-intrinsic-size: auto 100dvh;
+  contain-intrinsic-size: auto 480px;
 }
 
 .section-alt { background: var(--bg-alt); }
@@ -813,7 +828,7 @@ body.nav-open {
 }
 
 .capabilities-grid {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .product-checks {
@@ -887,6 +902,13 @@ body.nav-open {
   max-width: 36rem;
   margin-left: auto;
   margin-right: auto;
+}
+
+.cta-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* ===== CTA (standalone fallback) ===== */
@@ -1084,8 +1106,26 @@ body.nav-open {
 }
 
 .table-wrap {
+  position: relative;
   overflow-x: auto;
   margin: 1rem 0;
+}
+
+.table-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2rem;
+  pointer-events: none;
+  background: linear-gradient(to left, var(--bg), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.table-wrap.has-overflow::after {
+  opacity: 1;
 }
 
 table {
@@ -1260,6 +1300,13 @@ td { color: var(--text-muted); }
 
   .nav-actions .btn-primary { display: none; }
 
+  .nav-links .nav-cta-mobile {
+    display: block;
+    margin-top: 0.75rem;
+    width: 100%;
+    text-align: center;
+  }
+
   .docs-sidebar {
     position: static;
   }
@@ -1276,7 +1323,6 @@ td { color: var(--text-muted); }
   }
 
   .section {
-    min-height: 100dvh;
     align-content: start;
     padding: clamp(3.5rem, 6vh, 4.5rem) 0;
     padding-top: calc(var(--nav-h) + 2rem);

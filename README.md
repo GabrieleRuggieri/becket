@@ -19,6 +19,8 @@ It acts as a bridge between:
 - AI coding agents (Claude Code, Cursor, Codex, etc.)
 - Developers navigating and refactoring systems
 
+**Website:** [becket.dev](https://becket.dev) (or browse [`website/`](./website/) locally) · **Releases:** [GitHub Releases](https://github.com/GabrieleRuggieri/becket/releases)
+
 ---
 
 ## Use today (v0.2 — shipped)
@@ -32,7 +34,7 @@ These work **now**. No bundled LLM — optional prose enrichment uses your MCP h
 | `becket flow <domain>` | End-to-end execution path across services |
 | `becket context <symbol>` | **Markdown bundle**: wiki + real code snippets + impact (`--budget`, `--task`) |
 | `becket wiki sync\|lint\|show` | Recompile stale pages, CI lint, view grounded pages |
-| `becket build --watch` | Incremental rebuild; warns when wiki pages go stale |
+| `becket build --watch` | Incremental rebuild; auto-syncs stale wiki structure |
 | `becket workspace build` | Cross-repo linking (HTTP/gRPC/queue) |
 | MCP `get_context` | Same markdown bundle for agents |
 | MCP `get_wiki` | Grounded wiki page; `enrich=true` fills prose via sampling |
@@ -82,53 +84,6 @@ Run `becket build` once per repo (or use `becket build --watch` in a terminal). 
 ## Legacy v0.1 surface
 
 Impact, flow, and MCP queries were the primary v0.1 workflow. They remain fully supported; v0.2 adds the wiki layer and markdown context bundle on top.
-
----
-
-## The Problem
-
-Modern AI coding tools are powerful but fundamentally limited by context:
-
-### 1. Context Window Limitations
-Even large models struggle when:
-- repositories exceed hundreds or thousands of files
-- multiple layers of abstraction exist
-- domain logic is scattered
-
-### 2. Lack of Architectural Understanding
-LLMs typically:
-- understand local code snippets
-- fail to reconstruct system-wide architecture
-- hallucinate dependencies or flows
-
-### 3. Poor Impact Awareness
-Agents often:
-- modify code without understanding side effects
-- break unrelated features
-- miss hidden dependencies
-
-### 4. No Persistent Repository Memory
-Every session is stateless:
-- no durable understanding of the system
-- repeated analysis cost
-- inconsistent reasoning over time
-
----
-
-## The Solution
-
-Becket introduces a **local intelligence layer** that continuously analyzes a repository and exposes both *structure* and *meaning* — plus the code itself, on demand.
-
-It builds a persistent representation of:
-
-- Architectural structure
-- Domain concepts
-- Execution flows
-- Entry points
-- Dependencies
-- Symbol relationships
-- Change impact maps
-- **A grounded knowledge wiki** (markdown pages tied to real symbols)
 
 ---
 
@@ -273,27 +228,6 @@ One markdown bundle within the token budget:
 - **impact set** and related tests
 
 Task modes: `fix` (default), `refactor`, `onboard`.
-
----
-
-## Key Features
-
-### 1. Deterministic Code Graph
-Code-derived symbols, dependencies, calls, flows and entry points — measured, not guessed.
-
-### 2. Impact Analysis Engine
-Determines what breaks when a component changes.
-
-### 3. Grounded Knowledge Wiki
-A persistent, compounding markdown knowledge base, anchored to real symbols and lint-checked against
-the graph so it can't silently drift from the code.
-
-### 4. Context Assembly
-Returns the right code snippets plus the right understanding for a task, packed within a token budget.
-Markdown bundle by default; `--json` for tooling.
-
-### 5. Repository Memory Layer
-Maintains persistent structural *and* semantic understanding across sessions.
 
 ---
 
@@ -501,7 +435,8 @@ Il gate CI `cargo fmt --check` resta attivo come rete di sicurezza.
 | [CODEMAP.md](./CODEMAP.md) | Execution flow and crate graph |
 | [PROGRESS.md](./PROGRESS.md) | Development log / completed milestones |
 | [BACKLOG.md](./BACKLOG.md) | Open work prioritized P0–P2 |
-| [RULES.md](./RULES.md) | Git, commit, testing, and code quality conventions |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Development setup, tests, and contribution guide |
+| [CHANGELOG.md](./CHANGELOG.md) | Release history |
 
 ### License
 

@@ -56,15 +56,15 @@ const translations = {
     "layers.sub":
       "Structure from the graph, meaning in the wiki, code in the bundle — three layers that answer what is true, what it means, and what you need right now.",
     "layers.l1.title": "Deterministic Core",
-    "layers.l1.q": "What is true?",
+    "layers.l1.q": "What is <em>true</em>?",
     "layers.l1.desc":
       "Symbols, call graph, flows, entrypoints, impact — measured from source with tree-sitter. Byte-identical rebuilds. Zero LLM.",
     "layers.l2.title": "Grounded Repo Wiki",
-    "layers.l2.q": "What does it mean?",
+    "layers.l2.q": "What does it <em>mean</em>?",
     "layers.l2.desc":
       "Compounding markdown pages anchored to symbol IDs. Authored lazily via your agent's model. Stale pages are flagged automatically — the graph is ground truth.",
     "layers.l3.title": "Context Assembly",
-    "layers.l3.q": "What code do I need now?",
+    "layers.l3.q": "What code do I need <em>now</em>?",
     "layers.l3.desc":
       "Real source snippets + wiki page + impact set, ranked and packed to your token budget. Code is never model-generated.",
     "product.tag": "The product",
@@ -73,13 +73,13 @@ const translations = {
       "One local index. Persistent memory. Query-ready bundles — no re-reading the whole codebase every session.",
     "product.p1.title": "Index once",
     "product.p1.desc":
-      "becket build parses symbols, calls, flows, and impact. Writes .becket/ — no LLM required.",
+      "<code>becket build</code> parses symbols, calls, flows, and impact. Writes <code>.becket/</code> — no LLM required.",
     "product.p2.title": "Memory persists",
     "product.p2.desc":
       "Graph JSON + grounded wiki pages survive across agent sessions. Incremental rebuild on watch; stale wiki flagged automatically.",
     "product.p3.title": "Query per task",
     "product.p3.desc":
-      "context, impact, flow, MCP tools — real snippets + wiki + blast radius, token-budgeted.",
+      "<code>context</code>, <code>impact</code>, <code>flow</code>, MCP tools — real snippets + wiki + blast radius, token-budgeted.",
     "product.li1": "Impact before you commit — see what breaks downstream",
     "product.li2": "Wiki lint in CI — claims checked against the live call graph",
     "product.li3": "MCP get_context — one markdown bundle for Cursor / Claude Code",
@@ -206,10 +206,13 @@ const translations = {
     "docs.arch.l5d": "Context bundle builder (snippets + wiki + impact)",
     "docs.arch.l6": "Wiki",
     "docs.arch.l6d": "Grounded markdown + lint engine",
-    "docs.arch.note": "Full architecture: ARCHITECTURE.md in the repository.",
+    "docs.arch.note":
+      'Full architecture: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> in the repository.',
     "docs.install.title": "Installation",
     "docs.install.desc":
       "Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.",
+    "docs.install.homebrew": "Homebrew",
+    "docs.install.npm": "npm",
     "docs.install.cargo": "Cargo",
     "docs.toc.adoption": "Quick Start",
     "docs.nav.adoption": "Quick Start",
@@ -219,7 +222,8 @@ const translations = {
     "docs.adoption.s2": "Run becket build in your repository root.",
     "docs.adoption.s3": "Add becket-mcp to Cursor or Claude Code — the agent calls get_context before edits.",
     "docs.adoption.mcpTitle": "Cursor MCP config",
-    "docs.install.note": "After install, run becket build in any repository. Zero configuration required.",
+    "docs.install.note":
+      "After install, run <code>becket build</code> in any repository. Zero configuration required.",
   },
   it: {
     "a11y.skip": "Salta al contenuto",
@@ -278,15 +282,15 @@ const translations = {
     "layers.sub":
       "Struttura dal grafo, significato nella wiki, codice nel bundle — tre layer per cosa è vero, cosa significa e cosa ti serve adesso.",
     "layers.l1.title": "Core Deterministico",
-    "layers.l1.q": "Cosa è vero?",
+    "layers.l1.q": "Cosa è <em>vero</em>?",
     "layers.l1.desc":
       "Simboli, call graph, flussi, entrypoint, impact — misurati dal sorgente con tree-sitter. Rebuild byte-identici. Zero LLM.",
     "layers.l2.title": "Repo Wiki Ancorata",
-    "layers.l2.q": "Cosa significa?",
+    "layers.l2.q": "Cosa <em>significa</em>?",
     "layers.l2.desc":
       "Pagine markdown compounding ancorate a symbol ID. Autore lazy via il modello del tuo agente. Pagine stale segnalate automaticamente.",
     "layers.l3.title": "Context Assembly",
-    "layers.l3.q": "Che codice mi serve ora?",
+    "layers.l3.q": "Che codice mi serve <em>ora</em>?",
     "layers.l3.desc":
       "Snippet reali + pagina wiki + impact set, classificati e impacchettati nel budget token. Il codice non è mai generato dal modello.",
     "product.tag": "Il prodotto",
@@ -295,13 +299,13 @@ const translations = {
       "Un indice locale. Memoria persistente. Bundle pronti per query — senza rileggere tutto il codebase ogni sessione.",
     "product.p1.title": "Indicizza una volta",
     "product.p1.desc":
-      "becket build analizza simboli, call, flussi e impact. Scrive .becket/ — senza LLM.",
+      "<code>becket build</code> analizza simboli, call, flussi e impact. Scrive <code>.becket/</code> — senza LLM.",
     "product.p2.title": "Memoria che resta",
     "product.p2.desc":
       "JSON del grafo + pagine wiki ancorate tra le sessioni. Rebuild incrementale in watch; wiki stale segnalata automaticamente.",
     "product.p3.title": "Query per task",
     "product.p3.desc":
-      "context, impact, flow, tool MCP — snippet reali + wiki + blast radius, nel budget token.",
+      "<code>context</code>, <code>impact</code>, <code>flow</code>, tool MCP — snippet reali + wiki + blast radius, nel budget token.",
     "product.li1": "Impact prima del commit — vedi cosa si rompe a valle",
     "product.li2": "Wiki lint in CI — claim verificati sul call graph live",
     "product.li3": "MCP get_context — un bundle markdown per Cursor / Claude Code",
@@ -423,9 +427,12 @@ const translations = {
     "docs.arch.l5d": "Context bundle (snippet + wiki + impact)",
     "docs.arch.l6": "Wiki",
     "docs.arch.l6d": "Markdown ancorato + lint engine",
-    "docs.arch.note": "Architettura completa: ARCHITECTURE.md nel repository.",
+    "docs.arch.note":
+      'Architettura completa: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> nel repository.',
     "docs.install.title": "Installazione",
     "docs.install.desc": "Becket è gratuito e open source (Apache-2.0).",
+    "docs.install.homebrew": "Homebrew",
+    "docs.install.npm": "npm",
     "docs.install.cargo": "Cargo",
     "docs.toc.adoption": "Quick Start",
     "docs.nav.adoption": "Quick Start",
@@ -435,7 +442,8 @@ const translations = {
     "docs.adoption.s2": "Esegui becket build nella root del repository.",
     "docs.adoption.s3": "Aggiungi becket-mcp a Cursor o Claude Code — l'agente chiama get_context prima delle modifiche.",
     "docs.adoption.mcpTitle": "Config MCP Cursor",
-    "docs.install.note": "Dopo l'installazione, esegui becket build. Zero configurazione.",
+    "docs.install.note":
+      "Dopo l'installazione, esegui <code>becket build</code>. Zero configurazione.",
   },
 };
 
@@ -472,18 +480,29 @@ const typingLines = {
   ],
 };
 
-let currentLang = localStorage.getItem("becket-lang") || "en";
+let currentLang = localStorage.getItem("becket-lang");
+if (!currentLang) {
+  currentLang = (navigator.language || "").startsWith("it") ? "it" : "en";
+}
+
+function applyTranslation(el, key, lang) {
+  const value = translations[lang]?.[key];
+  if (!value) return;
+  if (el.hasAttribute("data-i18n-html")) {
+    el.innerHTML = value;
+  } else {
+    el.textContent = value;
+  }
+}
 
 function setLanguage(lang) {
   currentLang = lang;
   localStorage.setItem("becket-lang", lang);
   document.documentElement.lang = lang;
 
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const key = el.getAttribute("data-i18n");
-    if (translations[lang]?.[key]) {
-      el.textContent = translations[lang][key];
-    }
+  document.querySelectorAll("[data-i18n], [data-i18n-html]").forEach((el) => {
+    const key = el.getAttribute("data-i18n") || el.getAttribute("data-i18n-html");
+    if (key) applyTranslation(el, key, lang);
   });
 
   const langBtn = document.getElementById("lang-toggle");

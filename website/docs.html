@@ -6,17 +6,18 @@
   <meta name="description" content="Becket Documentation — CLI, MCP, Architecture" />
   <title>Docs — Becket</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css?v=8" as="style" />
-  <link rel="stylesheet" href="css/styles.css?v=8" />
+  <link rel="preload" href="css/styles.css?v=9" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=9" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
-  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t);var l=localStorage.getItem("becket-lang");if(!l){l=(navigator.language||"").startsWith("it")?"it":"en"}document.documentElement.lang=l}catch(e){}</script>
 </head>
 <body>
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
+  <div id="copy-live" class="sr-only" aria-live="polite"></div>
   <canvas id="particles" aria-hidden="true"></canvas>
   <div class="glow glow-1" aria-hidden="true"></div>
   <div class="glow glow-2" aria-hidden="true"></div>
@@ -27,15 +28,10 @@
         <span class="logo-mark" aria-hidden="true"></span>
         <span>Becket</span>
       </a>
-      <nav class="nav-links" id="nav-links" aria-label="Documentation">
+      <nav class="nav-links docs-nav-links" id="nav-links" aria-label="Documentation">
         <a href="index.html" data-i18n="nav.home">Home</a>
-        <a href="#layers" data-i18n="docs.nav.layers">Layers</a>
-        <a href="#wiki" data-i18n="docs.nav.wiki">Wiki</a>
-        <a href="#mcp" data-i18n="docs.nav.mcp">MCP</a>
-        <a href="#principles" data-i18n="docs.nav.principles">Principles</a>
-        <a href="#architecture" data-i18n="docs.nav.architecture">Architecture</a>
-        <a href="#adoption" data-i18n="docs.nav.adoption">Adoption</a>
         <a href="#install" data-i18n="docs.nav.install">Install</a>
+        <a href="#install" class="btn btn-primary nav-cta-mobile" data-i18n="nav.getStarted">Get Started</a>
       </nav>
       <div class="nav-actions">
         <button class="btn-icon" id="lang-toggle" aria-label="Switch language">EN</button>
@@ -43,6 +39,7 @@
           <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
+        <a href="#install" class="btn btn-primary" data-i18n="nav.getStarted">Get Started</a>
       </div>
       <button class="nav-burger" id="nav-burger" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -239,7 +236,7 @@ becket domain add payment src/billing/** PaymentService</code></pre>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l3">Core</span><span>Parser · Resolver · Graph · Flow · Impact</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l4">Sources</span><span>Multi-language source · Git · Workspace</span></div>
           </div>
-          <p class="muted" data-i18n="docs.arch.note">Full architecture: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> in the repository.</p>
+          <p class="muted" data-i18n-html="docs.arch.note">Full architecture: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> in the repository.</p>
         </section>
 
         <section id="adoption" class="doc-section reveal">
@@ -270,13 +267,13 @@ becket domain add payment src/billing/** PaymentService</code></pre>
           <h2 data-i18n="docs.install.title">Installation</h2>
           <p data-i18n="docs.install.desc">Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.</p>
 
-          <h3>Homebrew</h3>
+          <h3 data-i18n="docs.install.homebrew">Homebrew</h3>
           <div class="code-block glass-card">
             <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="brew install becket">Copy</button></div>
             <pre><code>brew install becket</code></pre>
           </div>
 
-          <h3>npm</h3>
+          <h3 data-i18n="docs.install.npm">npm</h3>
           <div class="code-block glass-card">
             <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npx becket build">Copy</button></div>
             <pre><code>npx becket build</code></pre>
@@ -289,7 +286,7 @@ becket domain add payment src/billing/** PaymentService</code></pre>
           </div>
 
           <div class="install-note glass-card">
-            <p data-i18n="docs.install.note">After install, run <code>becket build</code> in any repository. Zero configuration required.</p>
+            <p data-i18n-html="docs.install.note">After install, run <code>becket build</code> in any repository. Zero configuration required.</p>
           </div>
         </section>
       </article>

@@ -56,7 +56,12 @@ impl WikiCompiler {
             symbol_ids: Vec::new(),
             source: WikiPageSource::Deterministic,
             graph_fingerprint: "index".into(),
-            see_also: pages.iter().map(|(m, _)| m.id.clone()).collect(),
+            see_also: {
+                let mut ids: Vec<String> = pages.iter().map(|(m, _)| m.id.clone()).collect();
+                ids.sort();
+                ids.dedup();
+                ids
+            },
             title: "Repo Wiki Index".into(),
         };
         wiki_store.write_index(&index_meta, &index_body)?;
@@ -130,7 +135,7 @@ impl WikiCompiler {
             }
             let symbol_ids = vec![symbol.id.clone()];
             let meta = WikiPageMeta {
-                id: format!("wiki_service_{}", slugify(&symbol.name)),
+                id: service_page_id(symbol),
                 kind: WikiPageKind::Service,
                 symbol_ids: symbol_ids.clone(),
                 source: WikiPageSource::Deterministic,
@@ -183,6 +188,16 @@ fn slugify(input: &str) -> String {
         .to_lowercase()
 }
 
+/// Unique wiki page id per entrypoint symbol (disambiguates e.g. multiple `main` functions).
+fn service_page_id(symbol: &SymbolRecord) -> String {
+    let path_key = symbol.file_path.replace(['/', '.'], "_");
+    format!(
+        "wiki_service_{}_{}",
+        slugify(&path_key),
+        slugify(&symbol.name)
+    )
+}
+
 fn render_index(pages: &[(WikiPageMeta, String)]) -> String {
     let mut md = String::from("# Repo Wiki\n\n");
     let mut by_kind: HashMap<WikiPageKind, Vec<&WikiPageMeta>> = HashMap::new();
@@ -198,7 +213,11 @@ fn render_index(pages: &[(WikiPageMeta, String)]) -> String {
             continue;
         };
         md.push_str(&format!("## {kind:?}\n\n"));
+        let mut seen = HashSet::new();
         for meta in items {
+            if !seen.insert(&meta.id) {
+                continue;
+            }
             let stem = meta.id.strip_prefix("wiki_").unwrap_or(&meta.id);
             md.push_str(&format!("- [{title}]({stem}.md)\n", title = meta.title));
         }
@@ -331,4 +350,32 @@ fn render_service_body(
 
     md.push_str(&prose_slot());
     Ok(md)
+}
+
+#[cfg(test)]
+mod compiler_tests {
+    use super::service_page_id;
+    use becket_schema::artifacts::SymbolRecord;
+    use becket_schema::symbol::{SymbolKind, Visibility};
+
+    fn entrypoint(name: &str, file_path: &str, id: &str) -> SymbolRecord {
+        SymbolRecord {
+            id: id.into(),
+            kind: SymbolKind::Function,
+            name: name.into(),
+            fqn: name.into(),
+            file_path: file_path.into(),
+            start_line: 1,
+            end_line: 10,
+            visibility: Visibility::Public,
+            module_id: None,
+        }
+    }
+
+    #[test]
+    fn service_page_ids_are_unique_per_file_and_name() {
+        let a = entrypoint("main", "crates/cli/src/main.rs", "sym_a");
+        let b = entrypoint("main", "crates/mcp/src/main.rs", "sym_b");
+        assert_ne!(service_page_id(&a), service_page_id(&b));
+    }
 }

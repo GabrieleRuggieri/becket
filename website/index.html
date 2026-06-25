@@ -6,17 +6,18 @@
   <meta name="description" content="Becket — verified code graph + grounded knowledge wiki + context assembly for AI coding agents" />
   <title>Becket — AI Context & Impact Engine</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css?v=8" as="style" />
-  <link rel="stylesheet" href="css/styles.css?v=8" />
+  <link rel="preload" href="css/styles.css?v=9" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=9" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
-  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t);var l=localStorage.getItem("becket-lang");if(!l){l=(navigator.language||"").startsWith("it")?"it":"en"}document.documentElement.lang=l}catch(e){}</script>
 </head>
 <body>
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
+  <div id="copy-live" class="sr-only" aria-live="polite"></div>
   <canvas id="particles" aria-hidden="true"></canvas>
   <div class="glow glow-1" aria-hidden="true"></div>
   <div class="glow glow-2" aria-hidden="true"></div>
@@ -34,6 +35,7 @@
         <a href="#product" data-i18n="nav.product">Product</a>
         <a href="#integrations" data-i18n="nav.integrations">Integrations</a>
         <a href="docs.html" data-i18n="nav.docs">Docs</a>
+        <a href="docs.html#install" class="btn btn-primary nav-cta-mobile" data-i18n="nav.getStarted">Get Started</a>
       </nav>
       <div class="nav-actions">
         <button class="btn-icon" id="lang-toggle" aria-label="Switch language">EN</button>
@@ -56,8 +58,8 @@
       <div class="hero-content reveal">
         <div class="badge" data-i18n="hero.badge">Open Source · Local-First · Apache-2.0</div>
         <h1>
-          <span data-i18n="hero.title1">The semantic layer</span><br />
-          <span class="gradient-text" data-i18n="hero.title2">between code & AI</span>
+          <span data-i18n="hero.title1">One call.</span><br />
+          <span class="gradient-text" data-i18n="hero.title2">The right context.</span>
         </h1>
         <p class="hero-sub" data-i18n="hero.sub">
           Becket transforms repositories into structured, queryable knowledge — giving AI agents and developers precise context, impact analysis, and architectural understanding.
@@ -179,19 +181,19 @@
         <article class="layer-card glass-card reveal" data-delay="0">
           <div class="layer-num">01</div>
           <h3 data-i18n="layers.l1.title">Deterministic Core</h3>
-          <p class="layer-q" data-i18n="layers.l1.q">What is <em>true</em>?</p>
+          <p class="layer-q" data-i18n-html="layers.l1.q">What is <em>true</em>?</p>
           <p data-i18n="layers.l1.desc">Symbols, call graph, flows, entrypoints, impact — measured from source with tree-sitter. Byte-identical rebuilds. Zero LLM.</p>
         </article>
         <article class="layer-card glass-card reveal" data-delay="100">
           <div class="layer-num">02</div>
           <h3 data-i18n="layers.l2.title">Grounded Repo Wiki</h3>
-          <p class="layer-q" data-i18n="layers.l2.q">What does it <em>mean</em>?</p>
+          <p class="layer-q" data-i18n-html="layers.l2.q">What does it <em>mean</em>?</p>
           <p data-i18n="layers.l2.desc">Compounding markdown pages anchored to symbol IDs. Authored lazily via your agent's model. Stale pages are flagged automatically — the graph is ground truth.</p>
         </article>
         <article class="layer-card glass-card reveal" data-delay="200">
           <div class="layer-num">03</div>
           <h3 data-i18n="layers.l3.title">Context Assembly</h3>
-          <p class="layer-q" data-i18n="layers.l3.q">What code do I need <em>now</em>?</p>
+          <p class="layer-q" data-i18n-html="layers.l3.q">What code do I need <em>now</em>?</p>
           <p data-i18n="layers.l3.desc">Real source snippets + wiki page + impact set, ranked and packed to your token budget. Code is never model-generated.</p>
         </article>
       </div>
@@ -210,7 +212,7 @@
         <article class="feature glass-card">
           <div class="feature-num">→</div>
           <h3 data-i18n="product.p1.title">Index once</h3>
-          <p data-i18n="product.p1.desc"><code>becket build</code> parses symbols, calls, flows, and impact. Writes <code>.becket/</code> — no LLM required.</p>
+          <p data-i18n-html="product.p1.desc"><code>becket build</code> parses symbols, calls, flows, and impact. Writes <code>.becket/</code> — no LLM required.</p>
         </article>
         <article class="feature glass-card">
           <div class="feature-num">→</div>
@@ -220,12 +222,10 @@
         <article class="feature glass-card">
           <div class="feature-num">→</div>
           <h3 data-i18n="product.p3.title">Query per task</h3>
-          <p data-i18n="product.p3.desc"><code>context</code>, <code>impact</code>, <code>flow</code>, MCP tools — real snippets + wiki + blast radius, token-budgeted.</p>
+          <p data-i18n-html="product.p3.desc"><code>context</code>, <code>impact</code>, <code>flow</code>, MCP tools — real snippets + wiki + blast radius, token-budgeted.</p>
         </article>
       </div>
-      <div class="product-capabilities reveal" data-delay="100">
-        <h3 class="product-capabilities-title" data-i18n="features.title">Built for precision, not guesswork</h3>
-        <div class="features-grid capabilities-grid">
+      <div class="features-grid capabilities-grid reveal" data-delay="100">
           <article class="feature glass-card feature-compact">
             <div class="feature-num">01</div>
             <h4 data-i18n="features.f1.title">Deterministic Code Graph</h4>
@@ -246,14 +246,7 @@
             <h4 data-i18n="features.f4.title">Context Assembly</h4>
             <p data-i18n="features.f4.desc">Returns the right code snippets plus understanding and impact — packed within a token budget.</p>
           </article>
-        </div>
       </div>
-      <ul class="check-list product-checks reveal" data-delay="150">
-        <li data-i18n="product.li1">Impact before you commit — see what breaks downstream</li>
-        <li data-i18n="product.li2">Wiki lint in CI — claims checked against the live call graph</li>
-        <li data-i18n="product.li3">MCP <code>get_context</code> — one markdown bundle for Cursor / Claude Code</li>
-        <li data-i18n="product.li4">Cross-repo workspace linking for monorepos and polyrepos</li>
-      </ul>
     </div>
   </section>
 
@@ -286,7 +279,10 @@
       <div class="cta-box glass-card reveal" data-delay="150">
         <h2 data-i18n="cta.title">Verified, compounding memory for AI coding agents</h2>
         <p data-i18n="cta.sub">Like Git for version control — Becket for code understanding that includes the code.</p>
+        <div class="cta-actions">
         <a href="docs.html#install" class="btn btn-primary btn-lg" data-i18n="cta.button">Start Building Context</a>
+        <a href="docs.html" class="btn btn-glass btn-lg" data-i18n="hero.cta2">Read the Docs</a>
+        </div>
       </div>
     </div>
   </section>

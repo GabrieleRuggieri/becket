@@ -250,7 +250,18 @@ function initNav() {
     links?.classList.toggle("open", open);
     document.body.classList.toggle("nav-open", open);
     burger?.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open && links) {
+      const first = links.querySelector("a");
+      first?.focus();
+    }
   };
+
+  const focusableInMenu = () =>
+    links
+      ? [...links.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])')].filter(
+          (el) => !el.disabled && el.offsetParent !== null
+        )
+      : [];
 
   let ticking = false;
   window.addEventListener(
@@ -269,6 +280,7 @@ function initNav() {
 
   if (burger && links) {
     burger.setAttribute("aria-expanded", "false");
+    burger.setAttribute("aria-controls", "nav-links");
     burger.addEventListener("click", () => {
       setMenuOpen(!links.classList.contains("open"));
     });
@@ -279,6 +291,18 @@ function initNav() {
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") setMenuOpen(false);
+      if (e.key !== "Tab" || !links.classList.contains("open")) return;
+      const items = focusableInMenu();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     });
   }
 }
@@ -346,11 +370,23 @@ function initDocs() {
         await navigator.clipboard.writeText(text);
         const original = btn.textContent;
         btn.textContent = "✓";
-        setTimeout(() => (btn.textContent = original), 1500);
+        const live = document.getElementById("copy-live");
+        if (live) live.textContent = "Copied to clipboard";
+        setTimeout(() => {
+          btn.textContent = original;
+          if (live) live.textContent = "";
+        }, 1500);
       } catch {
         btn.textContent = "!";
       }
     });
+  });
+
+  document.querySelectorAll(".table-wrap").forEach((wrap) => {
+    const check = () => wrap.classList.toggle("has-overflow", wrap.scrollWidth > wrap.clientWidth + 2);
+    check();
+    wrap.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check, { passive: true });
   });
 }
 
