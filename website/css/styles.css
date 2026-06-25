@@ -390,6 +390,37 @@ body.nav-open {
   margin: 0;
 }
 
+.hero-install-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.hero-install-hint code {
+  background: var(--code-bg);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: var(--accent-light);
+}
+
+.hero-install-hint a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.hero-install-hint a:hover {
+  text-decoration: underline;
+}
+
+.doc-lead {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .hero-stats {
   display: flex;
   gap: 1rem;

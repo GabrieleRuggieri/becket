@@ -18,6 +18,8 @@ const translations = {
     "hero.cta2": "Read the Docs",
     "hero.install.terminal": "terminal",
     "hero.install.copy": "Copy",
+    "hero.install.mcpHint":
+      'For Cursor or Claude Code, you also need <code>becket-mcp</code> — <a href="docs.html#adoption">see Docs</a>.',
     "hero.stat1": "Local & Free",
     "hero.stat2": "Telemetry",
     "hero.stat3": "Knowledge Layers",
@@ -212,17 +214,22 @@ const translations = {
     "docs.install.title": "Installation",
     "docs.install.desc":
       "Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.",
-    "docs.install.npm": "npm",
+    "docs.install.cli": "Try it now (CLI)",
+    "docs.install.cliDesc": "Index any repository — no global install required.",
+    "docs.install.mcp": "AI agents (MCP)",
+    "docs.install.mcpDesc":
+      "For Cursor, Claude Code, or any MCP host — install the server globally so it stays on PATH.",
     "docs.toc.adoption": "Quick Start",
     "docs.nav.adoption": "Quick Start",
     "docs.adoption.title": "Quick start",
     "docs.adoption.desc": "Three steps to wire Becket into your agent workflow.",
-    "docs.adoption.s1": "Install becket and becket-mcp via npm.",
-    "docs.adoption.s2": "Run becket build in your repository root.",
-    "docs.adoption.s3": "Add becket-mcp to Cursor or Claude Code — the agent calls get_context before edits.",
+    "docs.adoption.s1": "Run <code>npx becket build</code> in your repository root.",
+    "docs.adoption.s2": "Install the MCP server: <code>npm install -g becket-mcp</code>.",
+    "docs.adoption.s3":
+      "Add <code>becket-mcp</code> to Cursor or Claude Code — the agent calls <code>get_context</code> before edits.",
     "docs.adoption.mcpTitle": "Cursor MCP config",
     "docs.install.note":
-      "After install, run <code>becket build</code> in any repository. Zero configuration required.",
+      'Run <code>npx becket build</code> once per repo before using MCP. <a href="#adoption">Quick start</a> has the Cursor config.',
   },
   it: {
     "a11y.skip": "Salta al contenuto",
@@ -243,6 +250,8 @@ const translations = {
     "hero.cta2": "Leggi la Docs",
     "hero.install.terminal": "terminale",
     "hero.install.copy": "Copia",
+    "hero.install.mcpHint":
+      'Per Cursor o Claude Code serve anche <code>becket-mcp</code> — <a href="docs.html#adoption">vedi Docs</a>.',
     "hero.stat1": "Locale e Gratis",
     "hero.stat2": "Telemetria",
     "hero.stat3": "Layer di Conoscenza",
@@ -431,17 +440,22 @@ const translations = {
       'Architettura completa: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> nel repository.',
     "docs.install.title": "Installazione",
     "docs.install.desc": "Becket è gratuito e open source (Apache-2.0).",
-    "docs.install.npm": "npm",
+    "docs.install.cli": "Provalo subito (CLI)",
+    "docs.install.cliDesc": "Indicizza un repository — senza install globale.",
+    "docs.install.mcp": "Agenti AI (MCP)",
+    "docs.install.mcpDesc":
+      "Per Cursor, Claude Code o qualsiasi host MCP — installa il server in globale così resta nel PATH.",
     "docs.toc.adoption": "Quick Start",
     "docs.nav.adoption": "Quick Start",
     "docs.adoption.title": "Quick start",
     "docs.adoption.desc": "Tre passi per integrare Becket nel workflow del tuo agente.",
-    "docs.adoption.s1": "Installa becket e becket-mcp via npm.",
-    "docs.adoption.s2": "Esegui becket build nella root del repository.",
-    "docs.adoption.s3": "Aggiungi becket-mcp a Cursor o Claude Code — l'agente chiama get_context prima delle modifiche.",
+    "docs.adoption.s1": "Esegui <code>npx becket build</code> nella root del repository.",
+    "docs.adoption.s2": "Installa il server MCP: <code>npm install -g becket-mcp</code>.",
+    "docs.adoption.s3":
+      "Aggiungi <code>becket-mcp</code> a Cursor o Claude Code — l'agente chiama <code>get_context</code> prima delle modifiche.",
     "docs.adoption.mcpTitle": "Config MCP Cursor",
     "docs.install.note":
-      "Dopo l'installazione, esegui <code>becket build</code>. Zero configurazione.",
+      'Esegui <code>npx becket build</code> una volta per repo prima di usare MCP. La <a href="#adoption">quick start</a> ha la config Cursor.',
   },
 };
 

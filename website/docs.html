@@ -6,8 +6,8 @@
   <meta name="description" content="Becket Documentation — CLI, MCP, Architecture" />
   <title>Docs — Becket</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css?v=9" as="style" />
-  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <link rel="preload" href="css/styles.css?v=12" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=12" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
@@ -243,9 +243,9 @@ becket domain add payment src/billing/** PaymentService</code></pre>
           <h2 data-i18n="docs.adoption.title">Quick start</h2>
           <p data-i18n="docs.adoption.desc">Three steps to wire Becket into your agent workflow.</p>
           <ol class="adoption-steps">
-            <li data-i18n="docs.adoption.s1">Install becket and becket-mcp via npm.</li>
-            <li data-i18n="docs.adoption.s2">Run becket build in your repository root.</li>
-            <li data-i18n="docs.adoption.s3">Add becket-mcp to Cursor or Claude Code — the agent calls get_context before edits.</li>
+            <li data-i18n="docs.adoption.s1">Run <code>npx becket build</code> in your repository root.</li>
+            <li data-i18n="docs.adoption.s2">Install the MCP server: <code>npm install -g becket-mcp</code>.</li>
+            <li data-i18n="docs.adoption.s3">Add <code>becket-mcp</code> to Cursor or Claude Code — the agent calls <code>get_context</code> before edits.</li>
           </ol>
           <h3 data-i18n="docs.adoption.mcpTitle">Cursor MCP config</h3>
           <div class="code-block glass-card">
@@ -267,15 +267,22 @@ becket domain add payment src/billing/** PaymentService</code></pre>
           <h2 data-i18n="docs.install.title">Installation</h2>
           <p data-i18n="docs.install.desc">Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.</p>
 
-          <h3 data-i18n="docs.install.npm">npm</h3>
+          <h3 data-i18n="docs.install.cli">Try it now (CLI)</h3>
+          <p class="doc-lead" data-i18n="docs.install.cliDesc">Index any repository — no global install required.</p>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npm install -g becket becket-mcp">Copy</button></div>
-            <pre><code>npm install -g becket becket-mcp
-npx becket build</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npx becket build">Copy</button></div>
+            <pre><code>npx becket build</code></pre>
+          </div>
+
+          <h3 data-i18n="docs.install.mcp">AI agents (MCP)</h3>
+          <p class="doc-lead" data-i18n="docs.install.mcpDesc">For Cursor, Claude Code, or any MCP host — install the server globally so it stays on PATH.</p>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npm install -g becket-mcp">Copy</button></div>
+            <pre><code>npm install -g becket-mcp</code></pre>
           </div>
 
           <div class="install-note glass-card">
-            <p data-i18n-html="docs.install.note">After install, run <code>becket build</code> in any repository. Zero configuration required.</p>
+            <p data-i18n-html="docs.install.note">Run <code>npx becket build</code> once per repo before using MCP. <a href="#adoption">Quick start</a> has the Cursor config.</p>
           </div>
         </section>
       </article>
