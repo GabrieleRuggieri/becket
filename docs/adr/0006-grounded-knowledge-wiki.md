@@ -13,13 +13,13 @@ Due pattern emergenti coprono metà del problema ciascuno:
 - **RAG** — recupera chunk a ogni query; nessuna memoria compounding; chunking fragile sul codice.
 - **LLM Wiki** (Karpathy / Microsoft `llmwiki`) — markdown persistente, ma **non verificabile** contro il codice; ingest manuale/conversazionale; lint affidata all’LLM.
 
-RepoCtx ha già il **Deterministic Core** (grafo, impact, flow, entrypoint). Il rischio è costruire “LLM Wiki + JSON a lato” — copia del pattern gist con un layer in più, difficile da adottare e non migliore di un buon `CONTEXT.md` su repo piccoli.
+Becket ha già il **Deterministic Core** (grafo, impact, flow, entrypoint). Il rischio è costruire “LLM Wiki + JSON a lato” — copia del pattern gist con un layer in più, difficile da adottare e non migliore di un buon `CONTEXT.md` su repo piccoli.
 
 ## Obiettivo prodotto (north star)
 
 > **Un agente chiama un comando, riceve un unico context bundle pronto all’uso** (markdown o JSON), con codice verificato + significato + impact — entro un budget token. Zero orchestrazione manuale di più tool.
 
-RepoCtx non chiede all’agente di leggere `AGENTS.md`, navigare Obsidian, o assemblare pezzi. **Compila** il contesto come farebbe un buon documento `.md`, ma da grafo + wiki verificata.
+Becket non chiede all’agente di leggere `AGENTS.md`, navigare Obsidian, o assemblare pezzi. **Compila** il contesto come farebbe un buon documento `.md`, ma da grafo + wiki verificata.
 
 ## Decisione
 
@@ -27,13 +27,13 @@ Modello **a tre layer** (v1.1, additivo rispetto al core v1.0):
 
 | Layer | Responsabilità | Owner |
 |---|---|---|
-| **Deterministic Core** | Ground truth strutturale | RepoCtx (tree-sitter, no LLM) |
+| **Deterministic Core** | Ground truth strutturale | Becket (tree-sitter, no LLM) |
 | **Knowledge Layer (Repo Wiki)** | Intent, gotcha, convenzioni | Host LLM via MCP sampling, **compilata dal grafo** |
-| **Context Assembly** | Deliverable per l’agente | RepoCtx — **un bundle per task** |
+| **Context Assembly** | Deliverable per l’agente | Becket — **un bundle per task** |
 
 ### Perché non è “LLM Wiki + grafo”
 
-| LLM Wiki (pattern generico) | RepoCtx (Repo Wiki) |
+| LLM Wiki (pattern generico) | Becket (Repo Wiki) |
 |---|---|
 | Ingest di *documenti* curati dall’umano | Ingest di *sottografi* (simboli, edge, flow) |
 | Schema in `AGENTS.md` co-evoluto | Tassonomia **derivata** da directory, entrypoint, `flows.json` |
@@ -50,7 +50,7 @@ Modello **a tre layer** (v1.1, additivo rispetto al core v1.0):
 
 3. **Claim machine-readable** — per lint senza capire la prosa:
    ```markdown
-   <!-- repoctx:claim calls sym_billing_client source=graph -->
+   <!-- becket:claim calls sym_billing_client source=graph -->
    ```
 
 4. **Staleness incrementale** — stesso content-hash dell’incremental build; solo pagine ancorate a simboli toccati vanno in coda sync.
@@ -64,11 +64,11 @@ Modello **a tre layer** (v1.1, additivo rispetto al core v1.0):
    - `refactor` — impact profondo, cross-module
    - `onboard` — flow + overview, meno snippet
 
-8. **Output primario markdown** — `repoctx context X --format md` (default per agenti). `--json` per tooling. Un file, non quattro API da incollare.
+8. **Output primario markdown** — `becket context X --format md` (default per agenti). `--json` per tooling. Un file, non quattro API da incollare.
 
-9. **Authoring lazy via MCP sampling** (ADR-0003). `repoctx build` non richiede mai un modello.
+9. **Authoring lazy via MCP sampling** (ADR-0003). `becket build` non richiede mai un modello.
 
-10. **Storage** — `.repoctx/wiki/` regenerabile; commit opzionale in git per team.
+10. **Storage** — `.becket/wiki/` regenerabile; commit opzionale in git per team.
 
 ### Fuori scope
 
@@ -78,8 +78,8 @@ Modello **a tre layer** (v1.1, additivo rispetto al core v1.0):
 
 ## Conseguenze
 
-- `get_context` / `repoctx context` → bundle unico (markdown default)
-- `repoctx wiki sync|lint|show` + MCP `get_wiki`
+- `get_context` / `becket context` → bundle unico (markdown default)
+- `becket wiki sync|lint|show` + MCP `get_wiki`
 - Core v1.0 invariato; layer wiki/assembly strictly additive
 - Implementazione: BACKLOG P1-8 … P1-15; release **v0.2.0**
 
@@ -88,4 +88,4 @@ Modello **a tre layer** (v1.1, additivo rispetto al core v1.0):
 - Un agente risolve un bug con **una chiamata** a `get_context` senza `@` manuali su 10+ file
 - Wiki stale segnalata entro un `build --watch`, non scoperta a refactor fallito
 - Su repo medio, bundle < budget con snippet + impact corretti (test fixture + integrazione)
-- Developer usa `repoctx impact` prima del commit (workflow documentato)
+- Developer usa `becket impact` prima del commit (workflow documentato)

@@ -5,7 +5,7 @@
 
 ## Contesto
 
-RepoCtx deve analizzare repository da piccoli a enormi con bassa latenza, distribuzione come binario nativo e integrazione con agenti AI via MCP stdio.
+Becket deve analizzare repository da piccoli a enormi con bassa latenza, distribuzione come binario nativo e integrazione con agenti AI via MCP stdio.
 
 ## Decisione
 

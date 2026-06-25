@@ -1,0 +1,33 @@
+[package]
+name = "becket-core"
+description = "Deterministic analysis core: ingestion, parsing, graph building"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+ignore = { workspace = true }
+becket-embed = { workspace = true }
+becket-schema = { workspace = true }
+becket-store = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tree-sitter = { workspace = true }
+tree-sitter-go = { workspace = true }
+tree-sitter-java = { workspace = true }
+tree-sitter-javascript = { workspace = true }
+tree-sitter-python = { workspace = true }
+tree-sitter-rust = { workspace = true }
+tree-sitter-typescript = { workspace = true }
+toml = "0.9.6"
+
+[dev-dependencies]
+becket-query = { workspace = true }
+tempfile = "3"

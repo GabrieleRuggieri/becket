@@ -1,6 +1,6 @@
 /* ===== Theme Toggle ===== */
 function initTheme() {
-  const saved = localStorage.getItem("repoctx-theme") || "dark";
+  const saved = localStorage.getItem("becket-theme") || "dark";
   document.documentElement.setAttribute("data-theme", saved);
 
   const btn = document.getElementById("theme-toggle");
@@ -10,7 +10,7 @@ function initTheme() {
     const current = document.documentElement.getAttribute("data-theme");
     const next = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("repoctx-theme", next);
+    localStorage.setItem("becket-theme", next);
     document.dispatchEvent(new CustomEvent("themechange"));
   });
 }

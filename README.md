@@ -1,18 +1,18 @@
-# RepoCtx — AI Context & Impact Engine for Codebases
+# Becket — AI Context & Impact Engine for Codebases
 
 ## Overview
 
-RepoCtx is a developer-first CLI and MCP server that turns a repository into **persistent, queryable knowledge** for AI coding agents and developers. Its goal is to give an agent the *right code plus the right understanding* for a task — without dumping the whole repo into the context window, and without re-deriving everything on every query.
+Becket is a developer-first CLI and MCP server that turns a repository into **persistent, queryable knowledge** for AI coding agents and developers. Its goal is to give an agent the *right code plus the right understanding* for a task — without dumping the whole repo into the context window, and without re-deriving everything on every query.
 
 **North star:** one call → one context bundle (markdown) with verified code snippets + meaning + impact, within a token budget. See [ADR-0006](./docs/adr/0006-grounded-knowledge-wiki.md).
 
-Instead of treating a repository as a collection of files, RepoCtx maintains three coordinated layers:
+Instead of treating a repository as a collection of files, Becket maintains three coordinated layers:
 
 1. **Deterministic Core** — a precise, code-derived graph of symbols, dependencies, flows, entry points and change-impact. This is *ground truth*: measured from the source, never guessed.
 2. **Knowledge Layer (Repo Wiki)** — a persistent, compounding set of markdown pages (module/service/flow/concept) that explain *intent, conventions and gotchas*. Pages are **anchored to real symbols** and authored lazily by the host agent's model (via MCP sampling) — never re-derived from scratch.
-3. **Context Assembly** — on a query, RepoCtx returns the relevant **wiki page + actual code snippets + impact set**, packed within a token budget. This is the "code in context" layer.
+3. **Context Assembly** — on a query, Becket returns the relevant **wiki page + actual code snippets + impact set**, packed within a token budget. This is the "code in context" layer.
 
-The deterministic core keeps the wiki trustworthy: RepoCtx derives the real call graph from source, **grounds** wiki pages on symbol IDs, and **lints** claims against the live graph so stale or wrong relationships are flagged automatically.
+The deterministic core keeps the wiki trustworthy: Becket derives the real call graph from source, **grounds** wiki pages on symbol IDs, and **lints** claims against the live graph so stale or wrong relationships are flagged automatically.
 
 It acts as a bridge between:
 - Large codebases
@@ -27,13 +27,13 @@ These work **now**. No bundled LLM — optional prose enrichment uses your MCP h
 
 | Command / tool | What you get |
 |---|---|
-| `repoctx build` | Deterministic graph + **grounded wiki** → `.repoctx/*.json` + `.repoctx/wiki/` |
-| `repoctx impact <symbol>` | What breaks downstream (call graph + modules) |
-| `repoctx flow <domain>` | End-to-end execution path across services |
-| `repoctx context <symbol>` | **Markdown bundle**: wiki + real code snippets + impact (`--budget`, `--task`) |
-| `repoctx wiki sync\|lint\|show` | Recompile stale pages, CI lint, view grounded pages |
-| `repoctx build --watch` | Incremental rebuild; warns when wiki pages go stale |
-| `repoctx workspace build` | Cross-repo linking (HTTP/gRPC/queue) |
+| `becket build` | Deterministic graph + **grounded wiki** → `.becket/*.json` + `.becket/wiki/` |
+| `becket impact <symbol>` | What breaks downstream (call graph + modules) |
+| `becket flow <domain>` | End-to-end execution path across services |
+| `becket context <symbol>` | **Markdown bundle**: wiki + real code snippets + impact (`--budget`, `--task`) |
+| `becket wiki sync\|lint\|show` | Recompile stale pages, CI lint, view grounded pages |
+| `becket build --watch` | Incremental rebuild; warns when wiki pages go stale |
+| `becket workspace build` | Cross-repo linking (HTTP/gRPC/queue) |
 | MCP `get_context` | Same markdown bundle for agents |
 | MCP `get_wiki` | Grounded wiki page; `enrich=true` fills prose via sampling |
 | MCP `get_impact`, `get_flow`, `get_dependencies` | Same queries for Cursor / Claude Code |
@@ -42,15 +42,15 @@ These work **now**. No bundled LLM — optional prose enrichment uses your MCP h
 
 ```bash
 # 1. Install (pick one)
-cargo install repoctx-cli repoctx-mcp --locked
-# or: npx repoctx build   (downloads binary)
+cargo install becket-cli becket-mcp --locked
+# or: npx becket build   (downloads binary)
 
 # 2. Index your repo
-cd your-project && repoctx build
+cd your-project && becket build
 
 # 3. Get agent-ready context before you edit
-repoctx context PaymentService --budget 6000 --task fix
-repoctx wiki lint --strict   # optional CI gate
+becket context PaymentService --budget 6000 --task fix
+becket wiki lint --strict   # optional CI gate
 ```
 
 ### Cursor / Claude Code (MCP)
@@ -60,22 +60,22 @@ Add to your MCP config (`.cursor/mcp.json` or Claude Code settings):
 ```json
 {
   "mcpServers": {
-    "repoctx": {
-      "command": "repoctx-mcp",
+    "becket": {
+      "command": "becket-mcp",
       "env": {
-        "REPOCTX_ROOT": "${workspaceFolder}"
+        "BECKET_ROOT": "${workspaceFolder}"
       }
     }
   }
 }
 ```
 
-Run `repoctx build` once per repo (or use `repoctx build --watch` in a terminal). The agent can call `get_context` / `get_wiki` / `get_impact` before modifying code.
+Run `becket build` once per repo (or use `becket build --watch` in a terminal). The agent can call `get_context` / `get_wiki` / `get_impact` before modifying code.
 
 ### Wiki prose enrichment
 
-- `repoctx wiki sync` — recompiles **structure** from the graph (preserves enriched prose)
-- MCP `get_wiki` with `enrich=true` — fills intent/gotchas via host model and **persists** to `.repoctx/wiki/`
+- `becket wiki sync` — recompiles **structure** from the graph (preserves enriched prose)
+- MCP `get_wiki` with `enrich=true` — fills intent/gotchas via host model and **persists** to `.becket/wiki/`
 
 ---
 
@@ -117,7 +117,7 @@ Every session is stateless:
 
 ## The Solution
 
-RepoCtx introduces a **local intelligence layer** that continuously analyzes a repository and exposes both *structure* and *meaning* — plus the code itself, on demand.
+Becket introduces a **local intelligence layer** that continuously analyzes a repository and exposes both *structure* and *meaning* — plus the code itself, on demand.
 
 It builds a persistent representation of:
 
@@ -132,9 +132,9 @@ It builds a persistent representation of:
 
 ---
 
-## What RepoCtx does
+## What Becket does
 
-RepoCtx is a **local intelligence layer for codebases**. It indexes your repository once, keeps a **persistent memory** under `.repoctx/`, and answers agent-ready queries with verified structure, optional human-readable wiki prose, and **real source snippets** — packed to your token budget.
+Becket is a **local intelligence layer for codebases**. It indexes your repository once, keeps a **persistent memory** under `.becket/`, and answers agent-ready queries with verified structure, optional human-readable wiki prose, and **real source snippets** — packed to your token budget.
 
 ### The problem
 
@@ -145,20 +145,20 @@ When an AI agent (or a developer) works on a large repo, four things go wrong:
 3. **No impact awareness** — a small change can break distant code nobody thought to load.
 4. **No durable memory** — every session re-discovers the same architecture from scratch.
 
-RepoCtx addresses all four with one local index and one query surface.
+Becket addresses all four with one local index and one query surface.
 
 ### How it works
 
 ```
-your repo  →  repoctx build  →  .repoctx/ (graph + wiki)
+your repo  →  becket build  →  .becket/ (graph + wiki)
                                       ↓
-              repoctx context | impact | flow | wiki …
+              becket context | impact | flow | wiki …
                                       ↓
                          markdown bundle for agents
 ```
 
-1. **`repoctx build`** — walks and parses the repo (tree-sitter). Builds symbols, call graph, flows, entrypoints, impact maps, and grounded wiki pages. **No LLM required.**
-2. **Persistent memory** — JSON artifacts + `.repoctx/wiki/*.md` survive across sessions. Incremental rebuild on `build --watch`; wiki pages get stale fingerprints when anchored symbols change.
+1. **`becket build`** — walks and parses the repo (tree-sitter). Builds symbols, call graph, flows, entrypoints, impact maps, and grounded wiki pages. **No LLM required.**
+2. **Persistent memory** — JSON artifacts + `.becket/wiki/*.md` survive across sessions. Incremental rebuild on `build --watch`; wiki pages get stale fingerprints when anchored symbols change.
 3. **Per-task queries** — `context`, `impact`, `flow`, and MCP tools return what you need *now*, not the whole repo.
 
 ### Capabilities
@@ -178,9 +178,9 @@ your repo  →  repoctx build  →  .repoctx/ (graph + wiki)
 
 **Before fixing a bug** — agent calls `get_context` on the failing symbol with `--task fix`: callers, relevant snippets, impact depth 2, wiki gotchas.
 
-**Before a refactor** — `repoctx impact SymbolName` (or MCP `get_impact`) to see blast radius; `wiki lint --strict` in CI so docs do not lie about call relationships.
+**Before a refactor** — `becket impact SymbolName` (or MCP `get_impact`) to see blast radius; `wiki lint --strict` in CI so docs do not lie about call relationships.
 
-**Onboarding** — `repoctx flow <domain>` plus `context` with `--task onboard` for flows and overview with fewer snippets.
+**Onboarding** — `becket flow <domain>` plus `context` with `--task onboard` for flows and overview with fewer snippets.
 
 **Enriching intent** — MCP `get_wiki` with `enrich=true` fills prose slots (intent & gotchas) using the host model; structure stays graph-compiled.
 
@@ -198,13 +198,13 @@ your repo  →  repoctx build  →  .repoctx/ (graph + wiki)
 ### Initialize analysis
 
 ```bash
-repoctx build
+becket build
 ```
 
 Generates:
 
 ```
-.repoctx/
+.becket/
   architecture.json
   symbols.json
   flows.json
@@ -222,12 +222,12 @@ The JSON artifacts are produced deterministically with **no model required**.
 ### Knowledge wiki
 
 ```bash
-repoctx wiki sync     # recompile stale pages (structure; preserves enriched prose)
-repoctx wiki lint     # flag stale, contradictory, or orphan pages against the graph
-repoctx wiki show payment
+becket wiki sync     # recompile stale pages (structure; preserves enriched prose)
+becket wiki lint     # flag stale, contradictory, or orphan pages against the graph
+becket wiki show payment
 ```
 
-`lint` is the differentiator: because the deterministic graph is ground truth, RepoCtx can detect when
+`lint` is the differentiator: because the deterministic graph is ground truth, Becket can detect when
 a page claims a relationship the code no longer has. Use `wiki lint --strict` in CI.
 
 Prose enrichment: MCP `get_wiki` with `enrich=true` (host model required).
@@ -235,7 +235,7 @@ Prose enrichment: MCP `get_wiki` with `enrich=true` (host model required).
 ### Query impact of changes
 
 ```bash
-repoctx impact UserService
+becket impact UserService
 ```
 
 Output:
@@ -249,7 +249,7 @@ Output:
 ### Understand a flow
 
 ```bash
-repoctx flow payment
+becket flow payment
 ```
 
 Output:
@@ -262,8 +262,8 @@ Output:
 ### Generate AI-ready context
 
 ```bash
-repoctx context PaymentService --budget 6000 --task fix
-repoctx context PaymentService --json   # structured output for tooling
+becket context PaymentService --budget 6000 --task fix
+becket context PaymentService --json   # structured output for tooling
 ```
 
 One markdown bundle within the token budget:
@@ -299,16 +299,16 @@ Maintains persistent structural *and* semantic understanding across sessions.
 
 ## Integration with AI Tools
 
-RepoCtx is designed to be **agent-agnostic**.
+Becket is designed to be **agent-agnostic**.
 
 ### Claude Code / Claude CLI
 
 Agents can call:
 
 ```bash
-repoctx context <symbol>
-repoctx impact <symbol>
-repoctx flow <domain>
+becket context <symbol>
+becket impact <symbol>
+becket flow <domain>
 ```
 
 to retrieve precise context before modifying code.
@@ -317,7 +317,7 @@ to retrieve precise context before modifying code.
 
 ### Cursor IDE
 
-Cursor can integrate RepoCtx as a background context provider:
+Cursor can integrate Becket as a background context provider:
 - enrich code suggestions with architectural awareness
 - reduce incorrect refactors
 - improve multi-file edits
@@ -326,13 +326,13 @@ Cursor can integrate RepoCtx as a background context provider:
 
 ### OpenAI Codex / Future CLI Agents
 
-Any agent can use RepoCtx as a tool:
+Any agent can use Becket as a tool:
 
 ```bash
 tools:
-  - repoctx.context
-  - repoctx.impact
-  - repoctx.flow
+  - becket.context
+  - becket.impact
+  - becket.flow
 ```
 
 This enables structured reasoning over large codebases.
@@ -341,10 +341,10 @@ This enables structured reasoning over large codebases.
 
 ### MCP (Model Context Protocol) Integration
 
-RepoCtx exposes an MCP server:
+Becket exposes an MCP server:
 
 ```
-repoctx-mcp
+becket-mcp
 ```
 
 Available tools:
@@ -353,7 +353,7 @@ Available tools:
 - **get_wiki** — grounded wiki page; `enrich=true` for prose via host model
 
 This allows seamless integration with modern AI agents. Wiki authoring/enrichment runs through the
-host agent's model via **MCP sampling** — RepoCtx bundles no LLM and holds no API keys.
+host agent's model via **MCP sampling** — Becket bundles no LLM and holds no API keys.
 
 ---
 
@@ -393,18 +393,18 @@ But current systems lack:
 - structured architectural memory
 - reliable impact reasoning
 
-RepoCtx fills this gap by becoming the **semantic layer between code and intelligence**.
+Becket fills this gap by becoming the **semantic layer between code and intelligence**.
 
 ---
 
 ## Long-Term Vision
 
-RepoCtx aims to become:
+Becket aims to become:
 
 > The standard context layer for all AI coding agents — a **verified, compounding memory** of a codebase.
 
 In the same way Git became the standard for version control,
-RepoCtx aims to become the standard for:
+Becket aims to become the standard for:
 
 - code understanding
 - AI context retrieval (code + knowledge, not just metadata)
@@ -433,10 +433,10 @@ The tool is successful if:
 ### Build from source
 
 ```bash
-git clone https://github.com/GabrieleRuggieri/repo-ctx.git
-cd repo-ctx
+git clone https://github.com/GabrieleRuggieri/becket.git
+cd becket
 cargo build --release
-./target/release/repoctx build
+./target/release/becket build
 ```
 
 ### Install (prebuilt)
@@ -444,33 +444,33 @@ cargo build --release
 **Homebrew** (after tap is published):
 
 ```bash
-brew tap GabrieleRuggieri/repoctx
-brew install repoctx
+brew tap GabrieleRuggieri/becket
+brew install becket
 ```
 
 **npm** (downloads native binary from GitHub Releases):
 
 ```bash
-npx repoctx build
+npx becket build
 ```
 
 **Cargo** (builds from source):
 
 ```bash
-cargo install repoctx-cli --locked
-cargo install repoctx-mcp --locked
+cargo install becket-cli --locked
+cargo install becket-mcp --locked
 ```
 
-**GitHub Releases**: download the archive for your platform from [Releases](https://github.com/GabrieleRuggieri/repo-ctx/releases), or use the shell installer attached to each release.
+**GitHub Releases**: download the archive for your platform from [Releases](https://github.com/GabrieleRuggieri/becket/releases), or use the shell installer attached to each release.
 
 See [packaging/README.md](./packaging/README.md) for maintainers cutting a new version.
 
 ### MCP server (AI agents)
 
 ```bash
-# Dalla root del repo da analizzare (dopo `repoctx build`)
-export REPOCTX_ROOT=.
-cargo run --bin repoctx-mcp --release
+# Dalla root del repo da analizzare (dopo `becket build`)
+export BECKET_ROOT=.
+cargo run --bin becket-mcp --release
 ```
 
 Tools esposti: `get_context`, `get_impact`, `get_flow`, `get_dependencies`, `get_wiki`.
@@ -511,7 +511,7 @@ Apache-2.0 — see [LICENSE](./LICENSE).
 
 ## Conclusion
 
-RepoCtx is not just another developer tool.
+Becket is not just another developer tool.
 
 It is a **missing layer between codebases and AI reasoning systems**.
 

@@ -12,8 +12,8 @@ const translations = {
     "hero.title1": "One call.",
     "hero.title2": "The right context.",
     "hero.sub":
-      "RepoCtx combines a verified code graph, a graph-grounded knowledge wiki, and real code snippets — giving AI agents one markdown context bundle per task, within your token budget.",
-    "hero.cta1": "Install RepoCtx",
+      "Becket combines a verified code graph, a graph-grounded knowledge wiki, and real code snippets — giving AI agents one markdown context bundle per task, within your token budget.",
+    "hero.cta1": "Install Becket",
     "hero.cta2": "Read the Docs",
     "hero.stat1": "Local & Free",
     "hero.stat2": "Telemetry",
@@ -38,7 +38,7 @@ const translations = {
     "solution.quote":
       '"The right code, the right understanding, and what breaks if you change it — within your token budget."',
     "solution.desc":
-      "RepoCtx combines a deterministic code graph (ground truth), a graph-grounded knowledge wiki (intent & gotchas), and context assembly that returns actual source snippets — not metadata alone.",
+      "Becket combines a deterministic code graph (ground truth), a graph-grounded knowledge wiki (intent & gotchas), and context assembly that returns actual source snippets — not metadata alone.",
     "solution.li1": "Graph verifies the wiki — no silent drift",
     "solution.li2": "Persistent memory that compounds across sessions",
     "solution.li3": "Code snippets + impact packed to your budget",
@@ -71,7 +71,7 @@ const translations = {
       "One local index. Persistent memory. Query-ready bundles — no re-reading the whole codebase every session.",
     "product.p1.title": "Index once",
     "product.p1.desc":
-      "repoctx build parses symbols, calls, flows, and impact. Writes .repoctx/ — no LLM required.",
+      "becket build parses symbols, calls, flows, and impact. Writes .becket/ — no LLM required.",
     "product.p2.title": "Memory persists",
     "product.p2.desc":
       "Graph JSON + grounded wiki pages survive across agent sessions. Incremental rebuild on watch; stale wiki flagged automatically.",
@@ -97,12 +97,12 @@ const translations = {
     "integrations.sub": "Works with any AI coding tool via CLI or MCP.",
     "integrations.cursor":
       "Background context provider — architectural awareness for suggestions and multi-file edits.",
-    "integrations.claude": "Agents call repoctx context, impact, and flow before modifying code.",
+    "integrations.claude": "Agents call becket context, impact, and flow before modifying code.",
     "integrations.codex": "Structured reasoning over large codebases via tool definitions.",
     "integrations.mcp":
-      "repoctx-mcp: get_context (code + wiki + impact), get_wiki, get_impact, get_flow, get_dependencies over stdio.",
+      "becket-mcp: get_context (code + wiki + impact), get_wiki, get_impact, get_flow, get_dependencies over stdio.",
     "cta.title": "Verified, compounding memory for AI coding agents",
-    "cta.sub": "Like Git for version control — RepoCtx for code understanding that includes the code.",
+    "cta.sub": "Like Git for version control — Becket for code understanding that includes the code.",
     "cta.button": "Start Building Context",
     "footer.copy": "Open source under Apache-2.0 · 100% local · Zero telemetry",
     "footer.docs": "Documentation",
@@ -125,10 +125,10 @@ const translations = {
     "docs.toc.install": "Installation",
     "docs.overview.title": "Documentation",
     "docs.overview.lead":
-      "RepoCtx is a local intelligence layer that combines a verified code graph, a graph-grounded knowledge wiki, and context assembly that returns real source snippets for AI agents and developers.",
+      "Becket is a local intelligence layer that combines a verified code graph, a graph-grounded knowledge wiki, and context assembly that returns real source snippets for AI agents and developers.",
     "docs.layers.title": "Three Knowledge Layers",
     "docs.layers.desc":
-      "RepoCtx indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).",
+      "Becket indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).",
     "docs.layers.l1": "Deterministic Core",
     "docs.layers.l1d": "Symbols, graph, flows, impact — from tree-sitter, no LLM",
     "docs.layers.l2": "Grounded Repo Wiki",
@@ -137,7 +137,7 @@ const translations = {
     "docs.layers.l3d": "Code snippets + wiki + impact, token-budgeted",
     "docs.cli.title": "CLI Reference",
     "docs.cli.build.title": "Initialize analysis",
-    "docs.cli.build.desc": "Generates versioned JSON artifacts under .repoctx/:",
+    "docs.cli.build.desc": "Generates versioned JSON artifacts under .becket/:",
     "docs.cli.wiki.title": "Knowledge wiki",
     "docs.cli.wiki.desc":
       "Sync creates/updates grounded markdown pages (lazy, via MCP host). Lint flags stale or contradictory pages against the live graph.",
@@ -160,7 +160,7 @@ const translations = {
     "docs.wiki.li3": "wiki lint compares page claims to live edges",
     "docs.wiki.li4": "index.md routes agents to relevant pages first",
     "docs.mcp.title": "MCP Integration",
-    "docs.mcp.desc": "RepoCtx exposes an MCP server over stdio for seamless agent integration.",
+    "docs.mcp.desc": "Becket exposes an MCP server over stdio for seamless agent integration.",
     "docs.mcp.th.tool": "Tool",
     "docs.mcp.th.desc": "Description",
     "docs.mcp.t1": "Code snippets + wiki page + impact, packed to budget",
@@ -169,7 +169,7 @@ const translations = {
     "docs.mcp.t4": "Direct and transitive dependencies",
     "docs.mcp.t5": "Grounded markdown page or index router",
     "docs.mcp.sampling":
-      "Wiki authoring and text enrichment use MCP sampling — the host agent's model handles prose. RepoCtx ships no LLM, holds no API keys, and never generates code — only slices real source.",
+      "Wiki authoring and text enrichment use MCP sampling — the host agent's model handles prose. Becket ships no LLM, holds no API keys, and never generates code — only slices real source.",
     "docs.artifacts.title": "Output Artifacts",
     "docs.artifacts.desc": "All outputs are JSON-compatible, schema-versioned, and machine-readable.",
     "docs.artifacts.th.file": "File",
@@ -207,17 +207,17 @@ const translations = {
     "docs.arch.note": "Full architecture: ARCHITECTURE.md in the repository.",
     "docs.install.title": "Installation",
     "docs.install.desc":
-      "RepoCtx is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.",
+      "Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.",
     "docs.install.cargo": "Cargo",
     "docs.toc.adoption": "Quick Start",
     "docs.nav.adoption": "Quick Start",
     "docs.adoption.title": "Quick start",
-    "docs.adoption.desc": "Three steps to wire RepoCtx into your agent workflow.",
-    "docs.adoption.s1": "Install repoctx-cli and repoctx-mcp (Cargo, npm, or Homebrew).",
-    "docs.adoption.s2": "Run repoctx build in your repository root.",
-    "docs.adoption.s3": "Add repoctx-mcp to Cursor or Claude Code — the agent calls get_context before edits.",
+    "docs.adoption.desc": "Three steps to wire Becket into your agent workflow.",
+    "docs.adoption.s1": "Install becket-cli and becket-mcp (Cargo, npm, or Homebrew).",
+    "docs.adoption.s2": "Run becket build in your repository root.",
+    "docs.adoption.s3": "Add becket-mcp to Cursor or Claude Code — the agent calls get_context before edits.",
     "docs.adoption.mcpTitle": "Cursor MCP config",
-    "docs.install.note": "After install, run repoctx build in any repository. Zero configuration required.",
+    "docs.install.note": "After install, run becket build in any repository. Zero configuration required.",
   },
   it: {
     "nav.problem": "Problema",
@@ -232,8 +232,8 @@ const translations = {
     "hero.title1": "Una chiamata.",
     "hero.title2": "Il contesto giusto.",
     "hero.sub":
-      "RepoCtx unisce un grafo verificato, una wiki ancorata al grafo e snippet di codice reali — un bundle markdown per task, nel tuo budget di token.",
-    "hero.cta1": "Installa RepoCtx",
+      "Becket unisce un grafo verificato, una wiki ancorata al grafo e snippet di codice reali — un bundle markdown per task, nel tuo budget di token.",
+    "hero.cta1": "Installa Becket",
     "hero.cta2": "Leggi la Docs",
     "hero.stat1": "Locale e Gratis",
     "hero.stat2": "Telemetria",
@@ -258,7 +258,7 @@ const translations = {
     "solution.quote":
       '"Il codice giusto, la comprensione giusta e cosa si rompe se lo cambi — entro il tuo budget di token."',
     "solution.desc":
-      "RepoCtx combina un grafo deterministico (ground truth), una wiki ancorata al grafo (intent e gotcha) e context assembly che restituisce snippet di sorgente reali — non solo metadati.",
+      "Becket combina un grafo deterministico (ground truth), una wiki ancorata al grafo (intent e gotcha) e context assembly che restituisce snippet di sorgente reali — non solo metadati.",
     "solution.li1": "Il grafo verifica la wiki — niente drift silenzioso",
     "solution.li2": "Memoria persistente che si arricchisce tra le sessioni",
     "solution.li3": "Snippet di codice + impact nel tuo budget",
@@ -291,7 +291,7 @@ const translations = {
       "Un indice locale. Memoria persistente. Bundle pronti per query — senza rileggere tutto il codebase ogni sessione.",
     "product.p1.title": "Indicizza una volta",
     "product.p1.desc":
-      "repoctx build analizza simboli, call, flussi e impact. Scrive .repoctx/ — senza LLM.",
+      "becket build analizza simboli, call, flussi e impact. Scrive .becket/ — senza LLM.",
     "product.p2.title": "Memoria che resta",
     "product.p2.desc":
       "JSON del grafo + pagine wiki ancorate tra le sessioni. Rebuild incrementale in watch; wiki stale segnalata automaticamente.",
@@ -316,12 +316,12 @@ const translations = {
     "integrations.title": "Agnostico rispetto agli agenti",
     "integrations.sub": "Funziona con qualsiasi tool AI via CLI o MCP.",
     "integrations.cursor": "Provider di contesto in background per edit multi-file.",
-    "integrations.claude": "Gli agenti chiamano repoctx context, impact e flow prima di modificare il codice.",
+    "integrations.claude": "Gli agenti chiamano becket context, impact e flow prima di modificare il codice.",
     "integrations.codex": "Ragionamento strutturato su codebase grandi.",
     "integrations.mcp":
-      "repoctx-mcp: get_context (codice + wiki + impact), get_wiki, get_impact, get_flow, get_dependencies su stdio.",
+      "becket-mcp: get_context (codice + wiki + impact), get_wiki, get_impact, get_flow, get_dependencies su stdio.",
     "cta.title": "Memoria verificata e compounding per agenti AI",
-    "cta.sub": "Come Git per il version control — RepoCtx per capire il codice includendo il codice.",
+    "cta.sub": "Come Git per il version control — Becket per capire il codice includendo il codice.",
     "cta.button": "Inizia a Costruire Contesto",
     "footer.copy": "Open source Apache-2.0 · 100% locale · Zero telemetria",
     "footer.docs": "Documentazione",
@@ -344,10 +344,10 @@ const translations = {
     "docs.toc.install": "Installazione",
     "docs.overview.title": "Documentazione",
     "docs.overview.lead":
-      "RepoCtx è un layer di intelligenza locale che combina grafo verificato, wiki ancorata al grafo e context assembly con snippet di sorgente reali per agenti AI e sviluppatori.",
+      "Becket è un layer di intelligenza locale che combina grafo verificato, wiki ancorata al grafo e context assembly con snippet di sorgente reali per agenti AI e sviluppatori.",
     "docs.layers.title": "Tre Layer di Conoscenza",
     "docs.layers.desc":
-      "RepoCtx indicizza il codebase in locale ed espone tre layer coordinati: grafo deterministico (ground truth), wiki ancorata ai simboli (intent e gotcha), context assembly (snippet reali nel budget token).",
+      "Becket indicizza il codebase in locale ed espone tre layer coordinati: grafo deterministico (ground truth), wiki ancorata ai simboli (intent e gotcha), context assembly (snippet reali nel budget token).",
     "docs.layers.l1": "Core Deterministico",
     "docs.layers.l1d": "Simboli, grafo, flussi, impact — da tree-sitter, senza LLM",
     "docs.layers.l2": "Repo Wiki Ancorata",
@@ -356,7 +356,7 @@ const translations = {
     "docs.layers.l3d": "Snippet + wiki + impact, a budget token",
     "docs.cli.title": "Riferimento CLI",
     "docs.cli.build.title": "Inizializza l'analisi",
-    "docs.cli.build.desc": "Genera artefatti JSON versionati sotto .repoctx/:",
+    "docs.cli.build.desc": "Genera artefatti JSON versionati sotto .becket/:",
     "docs.cli.wiki.title": "Knowledge wiki",
     "docs.cli.wiki.desc":
       "Sync crea/aggiorna pagine markdown ancorate (lazy, via host MCP). Lint segnala pagine stale o contraddittorie.",
@@ -377,7 +377,7 @@ const translations = {
     "docs.wiki.li3": "wiki lint confronta le affermazioni con gli edge live",
     "docs.wiki.li4": "index.md instrada gli agenti alle pagine rilevanti",
     "docs.mcp.title": "Integrazione MCP",
-    "docs.mcp.desc": "RepoCtx espone un server MCP su stdio.",
+    "docs.mcp.desc": "Becket espone un server MCP su stdio.",
     "docs.mcp.th.tool": "Tool",
     "docs.mcp.th.desc": "Descrizione",
     "docs.mcp.t1": "Snippet + pagina wiki + impact, nel budget",
@@ -386,7 +386,7 @@ const translations = {
     "docs.mcp.t4": "Dipendenze dirette e transitive",
     "docs.mcp.t5": "Pagina markdown ancorata o router index",
     "docs.mcp.sampling":
-      "Authoring wiki e arricchimento usano MCP sampling. RepoCtx non include LLM, non ha API key e non genera codice — solo slice reali.",
+      "Authoring wiki e arricchimento usano MCP sampling. Becket non include LLM, non ha API key e non genera codice — solo slice reali.",
     "docs.artifacts.title": "Artefatti di Output",
     "docs.artifacts.desc": "Output JSON-compatibili, versionati per schema.",
     "docs.artifacts.th.file": "File",
@@ -421,58 +421,58 @@ const translations = {
     "docs.arch.l6d": "Markdown ancorato + lint engine",
     "docs.arch.note": "Architettura completa: ARCHITECTURE.md nel repository.",
     "docs.install.title": "Installazione",
-    "docs.install.desc": "RepoCtx è gratuito e open source (Apache-2.0).",
+    "docs.install.desc": "Becket è gratuito e open source (Apache-2.0).",
     "docs.install.cargo": "Cargo",
     "docs.toc.adoption": "Quick Start",
     "docs.nav.adoption": "Quick Start",
     "docs.adoption.title": "Quick start",
-    "docs.adoption.desc": "Tre passi per integrare RepoCtx nel workflow del tuo agente.",
-    "docs.adoption.s1": "Installa repoctx-cli e repoctx-mcp (Cargo, npm o Homebrew).",
-    "docs.adoption.s2": "Esegui repoctx build nella root del repository.",
-    "docs.adoption.s3": "Aggiungi repoctx-mcp a Cursor o Claude Code — l'agente chiama get_context prima delle modifiche.",
+    "docs.adoption.desc": "Tre passi per integrare Becket nel workflow del tuo agente.",
+    "docs.adoption.s1": "Installa becket-cli e becket-mcp (Cargo, npm o Homebrew).",
+    "docs.adoption.s2": "Esegui becket build nella root del repository.",
+    "docs.adoption.s3": "Aggiungi becket-mcp a Cursor o Claude Code — l'agente chiama get_context prima delle modifiche.",
     "docs.adoption.mcpTitle": "Config MCP Cursor",
-    "docs.install.note": "Dopo l'installazione, esegui repoctx build. Zero configurazione.",
+    "docs.install.note": "Dopo l'installazione, esegui becket build. Zero configurazione.",
   },
 };
 
 const typingLines = {
   en: [
-    "$ repoctx build",
+    "$ becket build",
     "✓ Graph: 14,203 symbols indexed",
     "✓ Wiki: 47 pages grounded",
     "✓ Flows: payment, auth, billing",
     "",
-    "$ repoctx wiki lint",
+    "$ becket wiki lint",
     "→ 2 pages stale (graph changed)",
     "→ 0 contradictions",
     "",
-    "$ repoctx context PaymentService --budget 6000",
+    "$ becket context PaymentService --budget 6000",
     "→ wiki page + 3 code snippets",
     "→ 12 modules in impact set",
     "→ ready for AI agent ✓",
   ],
   it: [
-    "$ repoctx build",
+    "$ becket build",
     "✓ Grafo: 14.203 simboli indicizzati",
     "✓ Wiki: 47 pagine ancorate",
     "✓ Flussi: payment, auth, billing",
     "",
-    "$ repoctx wiki lint",
+    "$ becket wiki lint",
     "→ 2 pagine stale (grafo cambiato)",
     "→ 0 contraddizioni",
     "",
-    "$ repoctx context PaymentService --budget 6000",
+    "$ becket context PaymentService --budget 6000",
     "→ pagina wiki + 3 snippet di codice",
     "→ 12 moduli nell'impact set",
     "→ pronto per agente AI ✓",
   ],
 };
 
-let currentLang = localStorage.getItem("repoctx-lang") || "en";
+let currentLang = localStorage.getItem("becket-lang") || "en";
 
 function setLanguage(lang) {
   currentLang = lang;
-  localStorage.setItem("repoctx-lang", lang);
+  localStorage.setItem("becket-lang", lang);
   document.documentElement.lang = lang;
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {

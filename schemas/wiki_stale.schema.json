@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "`.repoctx/wiki_stale.json` — pages queued for re-sync after watch/build.",
+  "description": "`.becket/wiki_stale.json` — pages queued for re-sync after watch/build.",
   "properties": {
     "pageIds": {
       "items": {

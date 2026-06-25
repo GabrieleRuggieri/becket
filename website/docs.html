@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="RepoCtx Documentation — CLI, MCP, Architecture" />
-  <title>Docs — RepoCtx</title>
+  <meta name="description" content="Becket Documentation — CLI, MCP, Architecture" />
+  <title>Docs — Becket</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
   <link rel="preload" href="css/styles.css?v=4" as="style" />
   <link rel="stylesheet" href="css/styles.css?v=4" />
@@ -13,7 +13,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
-  <script>try{var t=localStorage.getItem("repoctx-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
 <body>
   <canvas id="particles" aria-hidden="true"></canvas>
@@ -24,7 +24,7 @@
     <div class="nav-inner container">
       <a href="index.html" class="logo">
         <span class="logo-mark" aria-hidden="true"></span>
-        <span>RepoCtx</span>
+        <span>Becket</span>
       </a>
       <nav class="nav-links">
         <a href="index.html" data-i18n="nav.home">Home</a>
@@ -69,12 +69,12 @@
       <article class="docs-content">
         <section id="overview" class="doc-section reveal">
           <h1 data-i18n="docs.overview.title">Documentation</h1>
-          <p class="lead" data-i18n="docs.overview.lead">RepoCtx is a local intelligence layer that combines a verified code graph, a graph-grounded knowledge wiki, and context assembly that returns real source snippets for AI agents and developers.</p>
+          <p class="lead" data-i18n="docs.overview.lead">Becket is a local intelligence layer that combines a verified code graph, a graph-grounded knowledge wiki, and context assembly that returns real source snippets for AI agents and developers.</p>
         </section>
 
         <section id="layers" class="doc-section reveal">
           <h2 data-i18n="docs.layers.title">Three Knowledge Layers</h2>
-          <p data-i18n="docs.layers.desc">RepoCtx indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).</p>
+          <p data-i18n="docs.layers.desc">Becket indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).</p>
           <div class="arch-stack">
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l3">Context Assembly</span><span data-i18n="docs.layers.l3d">Code snippets + wiki + impact, token-budgeted</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l2">Grounded Repo Wiki</span><span data-i18n="docs.layers.l2d">Markdown pages anchored to symbol IDs, MCP-authored, lint-checked</span></div>
@@ -87,12 +87,12 @@
 
           <h3 data-i18n="docs.cli.build.title">Initialize analysis</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="repoctx build">Copy</button></div>
-            <pre><code>repoctx build</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket build">Copy</button></div>
+            <pre><code>becket build</code></pre>
           </div>
-          <p data-i18n="docs.cli.build.desc">Generates versioned JSON artifacts under <code>.repoctx/</code>:</p>
+          <p data-i18n="docs.cli.build.desc">Generates versioned JSON artifacts under <code>.becket/</code>:</p>
           <div class="code-block glass-card">
-            <pre><code>.repoctx/
+            <pre><code>.becket/
   architecture.json
   symbols.json
   flows.json
@@ -105,37 +105,37 @@
 
           <h3 data-i18n="docs.cli.wiki.title">Knowledge wiki</h3>
           <div class="code-block glass-card">
-            <pre><code>repoctx wiki sync
-repoctx wiki lint
-repoctx wiki show OrderService</code></pre>
+            <pre><code>becket wiki sync
+becket wiki lint
+becket wiki show OrderService</code></pre>
           </div>
           <p data-i18n="docs.cli.wiki.desc">Sync creates/updates grounded markdown pages (lazy, via MCP host). Lint flags stale or contradictory pages against the live graph.</p>
 
           <h3 data-i18n="docs.cli.impact.title">Query impact</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="repoctx impact UserService">Copy</button></div>
-            <pre><code>repoctx impact UserService</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket impact UserService">Copy</button></div>
+            <pre><code>becket impact UserService</code></pre>
           </div>
           <p data-i18n="docs.cli.impact.desc">Returns affected modules, downstream dependencies, related tests, and potential risk zones.</p>
 
           <h3 data-i18n="docs.cli.flow.title">Understand a flow</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="repoctx flow payment">Copy</button></div>
-            <pre><code>repoctx flow payment</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket flow payment">Copy</button></div>
+            <pre><code>becket flow payment</code></pre>
           </div>
           <p data-i18n="docs.cli.flow.desc">Shows end-to-end execution path, service interactions, and external systems.</p>
 
           <h3 data-i18n="docs.cli.context.title">Context bundle (code included)</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="repoctx context PaymentService --format md --budget 6000 --task fix">Copy</button></div>
-            <pre><code>repoctx context PaymentService --format md --budget 6000 --task fix</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket context PaymentService --format md --budget 6000 --task fix">Copy</button></div>
+            <pre><code>becket context PaymentService --format md --budget 6000 --task fix</code></pre>
           </div>
           <p data-i18n="docs.cli.context.desc">Returns wiki page + real code snippets + impact set, packed within the token budget. Enough source to fix a bug — not the whole repo.</p>
 
           <h3 data-i18n="docs.cli.domain.title">Domain refinement (optional)</h3>
           <div class="code-block glass-card">
-            <pre><code>repoctx domain rename &lt;auto-id&gt; payment
-repoctx domain add payment src/billing/** PaymentService</code></pre>
+            <pre><code>becket domain rename &lt;auto-id&gt; payment
+becket domain add payment src/billing/** PaymentService</code></pre>
           </div>
           <p data-i18n="docs.cli.domain.desc">Zero-config by default. Refine auto-discovered domains via CLI — no config file required.</p>
         </section>
@@ -153,9 +153,9 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
 
         <section id="mcp" class="doc-section reveal">
           <h2 data-i18n="docs.mcp.title">MCP Integration</h2>
-          <p data-i18n="docs.mcp.desc">RepoCtx exposes an MCP server over stdio for seamless agent integration.</p>
+          <p data-i18n="docs.mcp.desc">Becket exposes an MCP server over stdio for seamless agent integration.</p>
           <div class="code-block glass-card">
-            <pre><code>repoctx-mcp</code></pre>
+            <pre><code>becket-mcp</code></pre>
           </div>
           <div class="table-wrap glass-card">
             <table>
@@ -174,7 +174,7 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
               </tbody>
             </table>
           </div>
-          <p data-i18n="docs.mcp.sampling">Wiki authoring and text enrichment use MCP sampling — the host agent's model handles prose. RepoCtx ships no LLM, holds no API keys, and never generates code — only slices real source.</p>
+          <p data-i18n="docs.mcp.sampling">Wiki authoring and text enrichment use MCP sampling — the host agent's model handles prose. Becket ships no LLM, holds no API keys, and never generates code — only slices real source.</p>
         </section>
 
         <section id="artifacts" class="doc-section reveal">
@@ -234,30 +234,30 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l1">Surfaces</span><span>CLI · MCP (stdio) · JSON + wiki artifacts</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l5">Assembly</span><span data-i18n="docs.arch.l5d">Context bundle builder (snippets + wiki + impact)</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l6">Wiki</span><span data-i18n="docs.arch.l6d">Grounded markdown + lint engine</span></div>
-            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l2">Store</span><span>SQLite + sqlite-vec · .repoctx/</span></div>
+            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l2">Store</span><span>SQLite + sqlite-vec · .becket/</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l3">Core</span><span>Parser · Resolver · Graph · Flow · Impact</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l4">Sources</span><span>Multi-language source · Git · Workspace</span></div>
           </div>
-          <p class="muted" data-i18n="docs.arch.note">Full architecture: <a href="https://github.com/GabrieleRuggieri/repo-ctx/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> in the repository.</p>
+          <p class="muted" data-i18n="docs.arch.note">Full architecture: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> in the repository.</p>
         </section>
 
         <section id="adoption" class="doc-section reveal">
           <h2 data-i18n="docs.adoption.title">Quick start</h2>
-          <p data-i18n="docs.adoption.desc">Three steps to wire RepoCtx into your agent workflow.</p>
+          <p data-i18n="docs.adoption.desc">Three steps to wire Becket into your agent workflow.</p>
           <ol class="adoption-steps">
-            <li data-i18n="docs.adoption.s1">Install repoctx-cli and repoctx-mcp (Cargo, npm, or Homebrew).</li>
-            <li data-i18n="docs.adoption.s2">Run repoctx build in your repository root.</li>
-            <li data-i18n="docs.adoption.s3">Add repoctx-mcp to Cursor or Claude Code — the agent calls get_context before edits.</li>
+            <li data-i18n="docs.adoption.s1">Install becket-cli and becket-mcp (Cargo, npm, or Homebrew).</li>
+            <li data-i18n="docs.adoption.s2">Run becket build in your repository root.</li>
+            <li data-i18n="docs.adoption.s3">Add becket-mcp to Cursor or Claude Code — the agent calls get_context before edits.</li>
           </ol>
           <h3 data-i18n="docs.adoption.mcpTitle">Cursor MCP config</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>.cursor/mcp.json</span><button class="copy-btn" data-copy='{"mcpServers":{"repoctx":{"command":"repoctx-mcp","env":{"REPOCTX_ROOT":"${workspaceFolder}"}}}}'>Copy</button></div>
+            <div class="code-header"><span>.cursor/mcp.json</span><button class="copy-btn" data-copy='{"mcpServers":{"becket":{"command":"becket-mcp","env":{"BECKET_ROOT":"${workspaceFolder}"}}}}'>Copy</button></div>
             <pre><code>{
   "mcpServers": {
-    "repoctx": {
-      "command": "repoctx-mcp",
+    "becket": {
+      "command": "becket-mcp",
       "env": {
-        "REPOCTX_ROOT": "${workspaceFolder}"
+        "BECKET_ROOT": "${workspaceFolder}"
       }
     }
   }
@@ -267,28 +267,28 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
 
         <section id="install" class="doc-section reveal">
           <h2 data-i18n="docs.install.title">Installation</h2>
-          <p data-i18n="docs.install.desc">RepoCtx is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.</p>
+          <p data-i18n="docs.install.desc">Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.</p>
 
           <h3>Homebrew</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="brew install repoctx">Copy</button></div>
-            <pre><code>brew install repoctx</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="brew install becket">Copy</button></div>
+            <pre><code>brew install becket</code></pre>
           </div>
 
           <h3>npm</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npx repoctx build">Copy</button></div>
-            <pre><code>npx repoctx build</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npx becket build">Copy</button></div>
+            <pre><code>npx becket build</code></pre>
           </div>
 
           <h3 data-i18n="docs.install.cargo">Cargo</h3>
           <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="cargo install repoctx">Copy</button></div>
-            <pre><code>cargo install repoctx</code></pre>
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="cargo install becket">Copy</button></div>
+            <pre><code>cargo install becket</code></pre>
           </div>
 
           <div class="install-note glass-card">
-            <p data-i18n="docs.install.note">After install, run <code>repoctx build</code> in any repository. Zero configuration required.</p>
+            <p data-i18n="docs.install.note">After install, run <code>becket build</code> in any repository. Zero configuration required.</p>
           </div>
         </section>
       </article>
@@ -299,12 +299,12 @@ repoctx domain add payment src/billing/** PaymentService</code></pre>
     <div class="container footer-inner">
       <div class="footer-brand">
         <span class="logo-mark" aria-hidden="true"></span>
-        <span>RepoCtx</span>
+        <span>Becket</span>
       </div>
       <p class="footer-copy" data-i18n="footer.copy">Open source under Apache-2.0 · 100% local · Zero telemetry</p>
       <div class="footer-links">
         <a href="index.html" data-i18n="nav.home">Home</a>
-        <a href="https://github.com/GabrieleRuggieri/repo-ctx" data-i18n="footer.github">GitHub</a>
+        <a href="https://github.com/GabrieleRuggieri/becket" data-i18n="footer.github">GitHub</a>
       </div>
     </div>
   </footer>

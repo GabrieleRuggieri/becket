@@ -1,10 +1,10 @@
-# RepoCtx — Architecture (Agreed v1.1)
+# Becket — Architecture (Agreed v1.1)
 
 > Status: **AGREED — source of truth for implementation.** Core decisions locked (see §9).
 > Architectural style: **local-first, deterministic-core, AI-augmented, agent-agnostic**.
 > License target: **Apache-2.0** (permissive + explicit patent grant).
 >
-> **v1.1 evolution (additive — does not change the locked core):** RepoCtx adopts a **three-layer
+> **v1.1 evolution (additive — does not change the locked core):** Becket adopts a **three-layer
 > model**: the existing *Deterministic Core* (ground truth) now feeds a **Knowledge Layer (Repo Wiki)**
 > — a persistent, compounding set of markdown pages anchored to real symbols and authored lazily via
 > MCP sampling — and a **Context Assembly** surface that returns *code snippets + wiki + impact* within
@@ -27,28 +27,28 @@
 >   via MCP sampling; auto-lintable against the code. Additive: removing it loses prose, never facts.
 > - **Zero telemetry. No cloud, no team-sync** — purely local.
 > - Cross-service boundaries: **static + heuristic + AI inference** (no runtime tracing in v1).
-> - **Zero-config by default**: domains/flows auto-discovered; refinement via CLI, optional `repoctx.toml`.
+> - **Zero-config by default**: domains/flows auto-discovered; refinement via CLI, optional `becket.toml`.
 
 ---
 
 ## 1. High-Level Overview
 
-RepoCtx is a **local intelligence layer** for codebases. It ingests a repository, builds a
+Becket is a **local intelligence layer** for codebases. It ingests a repository, builds a
 deterministic structural model (symbols, dependencies, flows, entry points), compiles a **grounded
 knowledge wiki** on top of it, persists both as a versioned, machine-readable store, and exposes them
 to humans and AI agents through three surfaces:
 
-1. A **CLI** (`repoctx build | impact | flow | context | wiki`).
-2. A set of **versioned artifacts** under `.repoctx/` (JSON graph + `wiki/*.md`).
-3. An **MCP server** (`repoctx-mcp`) speaking JSON-RPC over stdio.
+1. A **CLI** (`becket build | impact | flow | context | wiki`).
+2. A set of **versioned artifacts** under `.becket/` (JSON graph + `wiki/*.md`).
+3. An **MCP server** (`becket-mcp`) speaking JSON-RPC over stdio.
 
 Conceptually there are **three knowledge layers**, in increasing abstraction:
 
 | Layer | Owner | Answers | Persistence |
 |---|---|---|---|
-| **Deterministic Core** | RepoCtx (code-derived) | *What is true?* (symbols, edges, flows, impact) | JSON + SQLite, byte-identical rebuilds |
-| **Knowledge Layer (Repo Wiki)** | Host LLM, **grounded by the core** | *What does it mean? Why? Gotchas?* | `.repoctx/wiki/*.md`, compounding |
-| **Context Assembly** | RepoCtx (retrieval) | *What code + knowledge do I need now?* | computed per query, within a token budget |
+| **Deterministic Core** | Becket (code-derived) | *What is true?* (symbols, edges, flows, impact) | JSON + SQLite, byte-identical rebuilds |
+| **Knowledge Layer (Repo Wiki)** | Host LLM, **grounded by the core** | *What does it mean? Why? Gotchas?* | `.becket/wiki/*.md`, compounding |
+| **Context Assembly** | Becket (retrieval) | *What code + knowledge do I need now?* | computed per query, within a token budget |
 
 The core verifies the wiki (grounding + lint), and the wiki + core + raw source feed Context Assembly.
 
@@ -59,7 +59,7 @@ flowchart TB
     subgraph Sources["Workspace (local, 1..N repos)"]
         SRC["Source files\n(multi-language)"]
         GIT["Git history / diffs"]
-        CFG[".repoctx config\n.repoctxignore\nworkspace manifest"]
+        CFG[".becket config\n.becketignore\nworkspace manifest"]
     end
 
     subgraph Core["Deterministic Core (Rust, no network)"]
@@ -86,7 +86,7 @@ flowchart TB
 
     subgraph Store["Repository Memory (local persistence)"]
         IDX[("Index DB\nSQLite + vector")]
-        ART["Versioned artifacts\n.repoctx/*.json + wiki/*.md"]
+        ART["Versioned artifacts\n.becket/*.json + wiki/*.md"]
     end
 
     subgraph Surfaces["Access Surfaces"]
@@ -131,7 +131,7 @@ flowchart TB
 - The **AI-Augmentation Layer is strictly additive**: removing it degrades quality (fewer human-friendly names/summaries, no wiki prose) but never breaks structural correctness.
 - The **Knowledge Layer is grounded and verifiable**: every wiki page anchors to symbol ids from the core, and `wiki lint` re-checks page claims against the live graph. The graph is always the tie-breaker; on conflict, the page is flagged stale, never the graph.
 - **Context Assembly never invents code**: snippets are sliced from the real source on disk; only prose (wiki) can be model-authored.
-- The **artifacts (`.repoctx/*.json` + `.repoctx/wiki/*.md`) are the public contract**; the index DB is an internal, rebuildable cache.
+- The **artifacts (`.becket/*.json` + `.becket/wiki/*.md`) are the public contract**; the index DB is an internal, rebuildable cache.
 
 ---
 
@@ -152,28 +152,28 @@ distribution, while still integrating cleanly with the AI ecosystem.
 | **Language support** | **Plugin model** — one grammar + extraction ruleset per language, loaded from a registry | "As many languages as possible" without a monolith; community can add languages; ships a curated core set first. |
 | **Index / Memory DB** | **SQLite** (`rusqlite`) with **recursive CTEs** for graph traversal | Embedded, zero-config, transactional, extremely fast locally; recursive CTEs cover impact/flow traversal. |
 | **Vector store** | **`sqlite-vec`** (same SQLite file) | Single embedded file, no extra service; aligns with local-first. |
-| **Embeddings** | **Bundled local ONNX model** via `ort` (+ `fastembed-rs`), small (e.g. BGE-small, ~100 MB) | The *only* model RepoCtx ships. Runs in-process, offline, deterministic — **not** a server/daemon and **not** Ollama. Downloaded once on first build, then cached. License verified Apache-2.0/MIT. |
+| **Embeddings** | **Bundled local ONNX model** via `ort` (+ `fastembed-rs`), small (e.g. BGE-small, ~100 MB) | The *only* model Becket ships. Runs in-process, offline, deterministic — **not** a server/daemon and **not** Ollama. Downloaded once on first build, then cached. License verified Apache-2.0/MIT. |
 | **LLM text enrichment** | **Exclusively host-delegated via MCP sampling** (Cursor / Claude Code / Codex model) | No bundled LLM, **no Ollama, no remote provider, no API keys**. If no MCP host is present, text enrichment is simply skipped — deterministic output is unaffected. |
 | **Artifact schemas** | **JSON Schema** + generated types, explicit `schemaVersion` | Output is a versioned public contract; schemas are testable and self-documenting. |
-| **Distribution** | **Native signed binaries** via `cargo-dist` (GitHub Releases) + **Homebrew tap** + `cargo install` + a **thin npm wrapper** that fetches the right binary | Best reach: `brew`/`cargo` for native users, `npx repoctx` for JS devs — same pattern as ripgrep, ast-grep, biome, swc. |
+| **Distribution** | **Native signed binaries** via `cargo-dist` (GitHub Releases) + **Homebrew tap** + `cargo install` + a **thin npm wrapper** that fetches the right binary | Best reach: `brew`/`cargo` for native users, `npx becket` for JS devs — same pattern as ripgrep, ast-grep, biome, swc. |
 
 > **Graph storage note:** we start with SQLite + recursive CTEs (simplest, fully embedded). If traversal
 > depth/latency on enormous monorepos becomes a bottleneck, an embedded graph engine
 > (e.g. **KùzuDB**, Cypher) is the pre-vetted upgrade path — same local-first footprint.
 
 ### How AI works (final decision)
-RepoCtx uses **two clearly separated kinds of "AI", and never bundles an LLM**:
+Becket uses **two clearly separated kinds of "AI", and never bundles an LLM**:
 
 1. **Embeddings (local, deterministic):** a single small ONNX model runs in-process to vectorize
    symbols for semantic search. This is an index, not a chatbot — no daemon, no Ollama, no network.
 2. **LLM text generation (host-delegated only):** human-friendly domain names and summaries are
    produced **exclusively via MCP sampling** — i.e. the model already running in the host agent
-   (Cursor, Claude Code, Codex). RepoCtx holds **no keys, no Ollama, no remote provider**.
+   (Cursor, Claude Code, Codex). Becket holds **no keys, no Ollama, no remote provider**.
 
-**Enrichment is opportunistic & lazy.** `repoctx build` always produces the full deterministic
+**Enrichment is opportunistic & lazy.** `becket build` always produces the full deterministic
 structure (and embeddings) with **no model required**. LLM naming/summaries are computed **on demand**
 the first time a symbol/flow is accessed through an MCP host that supports sampling, then **cached** in
-the store so the cost is paid once. Without a host model, RepoCtx falls back to deterministic names
+the store so the cost is paid once. Without a host model, Becket falls back to deterministic names
 (module/folder/symbol-derived) — fully functional, just less prose.
 
 ### Explicitly *not* needed
@@ -184,11 +184,11 @@ No managed cloud database, no Kubernetes, no always-on web backend, **no team-sy
 
 ## 3. System Architecture
 
-### 3.1 Build pipeline (data flow on `repoctx build`)
+### 3.1 Build pipeline (data flow on `becket build`)
 
 ```mermaid
 flowchart LR
-    A["Walk files\n(respect .repoctxignore)"] --> B["Hash files\n(content + mtime)"]
+    A["Walk files\n(respect .becketignore)"] --> B["Hash files\n(content + mtime)"]
     B --> C{"Changed\nsince last run?"}
     C -- "no" --> R["Reuse cached\nparse/graph"]
     C -- "yes" --> D["Parse with tree-sitter"]
@@ -200,7 +200,7 @@ flowchart LR
     G --> H["Reconstruct flows\n+ detect entry points"]
     H --> EMB2["Embeddings (local ONNX)\n+ deterministic names"]
     EMB2 --> J["Persist to Index DB"]
-    J --> K["Emit versioned JSON\n.repoctx/*.json"]
+    J --> K["Emit versioned JSON\n.becket/*.json"]
     J -. "lazy, on query via MCP host" .-> LLM["LLM names/summaries\n(MCP sampling) → cached"]
 ```
 
@@ -212,7 +212,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant Agent as AI Agent
-    participant MCP as repoctx-mcp (stdio)
+    participant MCP as becket-mcp (stdio)
     participant Q as Query Engine
     participant DB as Index DB (SQLite + vec)
 
@@ -245,7 +245,7 @@ sequenceDiagram
 ### 3.4 Multi-repo / workspace model
 
 A **workspace** is a manifest listing one or more local repositories that belong to the same logical
-project (e.g. several microservices). Analysis runs per-repo (so each repo keeps its own `.repoctx/`),
+project (e.g. several microservices). Analysis runs per-repo (so each repo keeps its own `.becket/`),
 then the **Cross-repo Linker** stitches a unified graph using deterministic **service contracts**:
 
 - HTTP/REST: match client call sites (URL + verb) to server route declarations.
@@ -264,7 +264,7 @@ gotchas* — the things the graph cannot infer from structure alone. It is the L
 (Karpathy / Microsoft `llmwiki`) but **grounded in the deterministic graph**, which is what makes it
 trustworthy rather than drift-prone.
 
-**Page model.** Each page is a markdown file under `.repoctx/wiki/` with YAML frontmatter:
+**Page model.** Each page is a markdown file under `.becket/wiki/` with YAML frontmatter:
 
 ```markdown
 ---
@@ -285,8 +285,8 @@ Responsibility, invariants, known gotchas, links to flows…
 - `symbol_ids` make pages **navigable both ways**: from a symbol you can find its page, and a page can
   resolve to exact code locations.
 
-**Authoring (ingest).** `repoctx build` never authors prose. Pages are created/updated **lazily via
-MCP sampling** the first time an area is queried, or eagerly via `repoctx wiki sync`. The prompt is
+**Authoring (ingest).** `becket build` never authors prose. Pages are created/updated **lazily via
+MCP sampling** the first time an area is queried, or eagerly via `becket wiki sync`. The prompt is
 **grounded**: it includes the deterministic facts for the anchored subgraph (symbols, edges, flows,
 entrypoints) plus redacted source excerpts, so the model summarizes *real* structure instead of
 guessing. Output is cached in the store and written to markdown. Without an MCP host, the layer is
@@ -300,15 +300,15 @@ drifts with every edit.
 **Claim blocks.** Structural assertions are machine-readable for deterministic lint:
 
 ```markdown
-<!-- repoctx:claim calls sym_billing_client source=graph -->
+<!-- becket:claim calls sym_billing_client source=graph -->
 ```
 
 Lint compares claims to live edges without parsing natural language.
 
-**Watch-triggered sync.** After `repoctx build --watch`, pages whose `graph_fingerprint` no longer
+**Watch-triggered sync.** After `becket build --watch`, pages whose `graph_fingerprint` no longer
 matches the anchored subgraph are queued for `wiki sync`. Maintenance is event-driven, not manual.
 
-**Verification (lint).** Because the graph is ground truth, `repoctx wiki lint` can do what a pure LLM
+**Verification (lint).** Because the graph is ground truth, `becket wiki lint` can do what a pure LLM
 wiki cannot:
 - **Stale detection** — recompute each page's `graph_fingerprint`; if the anchored subgraph changed,
   the page is flagged for re-sync.
@@ -355,7 +355,7 @@ flowchart LR
 - **Primary output is markdown** (default) — one paste-ready file for agents. `--json` for tooling.
 - The bundle is the union of all three layers — *verified structure + meaning + code*.
 
-**Shipped (v0.2):** `repoctx context` returns markdown with real snippets, sanitized wiki, impact, and greedy packing to `--budget`. Task modes: `fix`, `refactor`, `onboard`.
+**Shipped (v0.2):** `becket context` returns markdown with real snippets, sanitized wiki, impact, and greedy packing to `--budget`. Task modes: `fix`, `refactor`, `onboard`.
 
 ---
 
@@ -459,7 +459,7 @@ erDiagram
         string id PK
         string kind "module|service|flow|concept|overview"
         string title
-        string path "relative .repoctx/wiki/*.md"
+        string path "relative .becket/wiki/*.md"
         string source "deterministic|mcp_sampling"
         string graph_fingerprint "hash of anchored subgraph at authoring time"
         string content_hash
@@ -471,7 +471,7 @@ erDiagram
     }
 ```
 
-### Artifact mapping (`.repoctx/`)
+### Artifact mapping (`.becket/`)
 | File | Backed by | Purpose |
 |---|---|---|
 | `architecture.json` | MODULE + layer/edge summary | High-level structural map |
@@ -500,14 +500,14 @@ Simplicity is a hard requirement: **the tool must work with no configuration fil
 1. **Auto-discovery (default, zero-config):** deterministic signals — module/folder names, call-graph
    clustering, entry-point grouping — plus embedding similarity, propose domains automatically. Names
    are deterministic by default and upgraded to nicer prose lazily via MCP sampling when available.
-   `repoctx build` + `repoctx flow payment` just works on a fresh repo.
+   `becket build` + `becket flow payment` just works on a fresh repo.
 2. **CLI refinement (no hand-written syntax):** if a guess is wrong, the developer fixes it with a
    command, persisted in the store — *not* a config file to author:
    ```
-   repoctx domain rename <auto-id> payment
-   repoctx domain add payment src/billing/** PaymentService
+   becket domain rename <auto-id> payment
+   becket domain add payment src/billing/** PaymentService
    ```
-3. **Optional `repoctx.toml` (power users only):** a single, tiny, fully-optional file for teams that
+3. **Optional `becket.toml` (power users only):** a single, tiny, fully-optional file for teams that
    want domain definitions version-controlled. Never required; the tool is fully functional without it.
 
 So: **zero config to start, CLI to refine, optional file only if you want it in Git.** No mandatory or
@@ -517,20 +517,20 @@ So: **zero config to start, CLI to refine, optional file only if you want it in 
 
 ## 5. API Design
 
-RepoCtx is **not** a REST/GraphQL service in v1 — being local-first, its "API" is three coordinated contracts:
+Becket is **not** a REST/GraphQL service in v1 — being local-first, its "API" is three coordinated contracts:
 
 ### 5.1 CLI contract
 Verb-based, scriptable, machine-friendly. Every command supports `--json` for stable structured output and non-zero exit codes on failure.
 ```
-repoctx build [--incremental] [--no-embeddings] [--watch]
-repoctx impact <symbol>   [--depth N] [--json]
-repoctx flow   <domain>   [--json]
-repoctx context <symbol>  [--budget <tokens>] [--task fix|refactor|onboard] [--json]
-repoctx wiki   sync  [--all]                    # recompile stale pages (structure; prose preserved)
-repoctx wiki   lint  [--json] [--strict]        # stale / claims / links / orphans vs graph
-repoctx wiki   show  <page|symbol>              # print grounded page
-repoctx domain  rename <auto-id> <name>
-repoctx domain  add    <name> <path|symbol>...
+becket build [--incremental] [--no-embeddings] [--watch]
+becket impact <symbol>   [--depth N] [--json]
+becket flow   <domain>   [--json]
+becket context <symbol>  [--budget <tokens>] [--task fix|refactor|onboard] [--json]
+becket wiki   sync  [--all]                    # recompile stale pages (structure; prose preserved)
+becket wiki   lint  [--json] [--strict]        # stale / claims / links / orphans vs graph
+becket wiki   show  <page|symbol>              # print grounded page
+becket domain  rename <auto-id> <name>
+becket domain  add    <name> <path|symbol>...
 ```
 
 **Shipped (v0.2):** `build`, `impact`, `flow`, `context` (markdown bundle), `wiki`, `domain`, `workspace build`.
@@ -554,7 +554,7 @@ completion — no embedded keys. `get_context` slices real source for snippets; 
 model-authored.
 
 ### 5.3 Artifact contract
-The `.repoctx/*.json` files are a **read API for any tool**, versioned via `schemaVersion`. This makes RepoCtx consumable even without running its process (CI checks, dashboards, other agents).
+The `.becket/*.json` files are a **read API for any tool**, versioned via `schemaVersion`. This makes Becket consumable even without running its process (CI checks, dashboards, other agents).
 
 **Why this paradigm:** the consumers are local processes and agents on the same machine. stdio MCP +
 files give zero network surface, zero auth complexity, and trivial composability. A **local HTTP/gRPC
@@ -577,9 +577,9 @@ flowchart LR
 ```
 
 - **CI/CD**: GitHub Actions, matrix over macOS/Linux/Windows (x64 + arm64). Gates: `cargo fmt`, `clippy`, tests, **JSON Schema validation**, and **determinism tests** (same fixture → byte-identical artifacts). Performance benchmarks guard against latency regressions on large-repo fixtures.
-- **Distribution** (best reach for an OSS standard): signed **native binaries** via `cargo-dist` on GitHub Releases, a **Homebrew tap**, `cargo install repoctx`, and a **thin npm wrapper** (`npx repoctx`) that downloads the matching prebuilt binary — the same model used by ripgrep, ast-grep, biome and swc.
+- **Distribution** (best reach for an OSS standard): signed **native binaries** via `cargo-dist` on GitHub Releases, a **Homebrew tap**, `cargo install becket`, and a **thin npm wrapper** (`npx becket`) that downloads the matching prebuilt binary — the same model used by ripgrep, ast-grep, biome and swc.
 - **Versioning**: release-please / conventional commits; the artifact `schemaVersion` is versioned **independently** from the CLI version.
-- **No cloud to operate.** There is **no team-sync, no backend, zero telemetry, and no outbound LLM traffic from RepoCtx** — any LLM call is executed by the host agent via MCP sampling, not by RepoCtx.
+- **No cloud to operate.** There is **no team-sync, no backend, zero telemetry, and no outbound LLM traffic from Becket** — any LLM call is executed by the host agent via MCP sampling, not by Becket.
 
 ---
 
@@ -590,12 +590,12 @@ The asset under protection is **the source code itself** (often the user's most 
 **Data handling & privacy**
 - **Local-first by construction**: the deterministic core has no network access; nothing leaves the machine.
 - **Zero telemetry** — no analytics, no usage collection, no "phone home", ever (per PO directive).
-- **`.repoctxignore`**: excludes paths (e.g. `.env`, vendored dirs) from analysis entirely.
+- **`.becketignore`**: excludes paths (e.g. `.env`, vendored dirs) from analysis entirely.
 - **Secret redaction**: before *any* LLM interaction (including MCP sampling), run secret-scanning/redaction (API keys, tokens) so secrets are never transmitted.
 
 **AI boundary (the main exfiltration risk)**
-- RepoCtx **bundles no LLM and integrates no remote provider** — there is no API key to leak and no outbound LLM call originating from RepoCtx.
-- LLM text generation happens **only via MCP sampling**, executed by the host agent (e.g. Cursor) over the existing stdio channel. RepoCtx opens no new connection.
+- Becket **bundles no LLM and integrates no remote provider** — there is no API key to leak and no outbound LLM call originating from Becket.
+- LLM text generation happens **only via MCP sampling**, executed by the host agent (e.g. Cursor) over the existing stdio channel. Becket opens no new connection.
 - The bundled embedding model is **local and in-process** (no daemon, no network).
 - Before content is handed to a sampling request, **secret-scanning/redaction** runs so secrets are never included.
 
@@ -633,17 +633,17 @@ Every decision below is settled; there are **no open questions** blocking develo
 | 5 | Embeddings | One **bundled local ONNX model** (BGE-small class, ~100 MB), downloaded on first build & cached. In-process, offline, deterministic. `--no-embeddings` opt-out. |
 | 6 | LLM enrichment | **Host-delegated via MCP sampling only** (Cursor/Claude Code/Codex). **No bundled LLM, no Ollama, no remote provider, no keys.** Lazy + cached; build never needs a model. |
 | 7 | Multi-repo | **First-class workspace** model; cross-repo linking via service contracts (HTTP/gRPC/proto/OpenAPI/queues/shared libs). Single-repo = workspace of 1. |
-| 8 | Workspace discovery | **Auto-detect** git repos under the working root (zero-config); optional `repoctx.toml` to override — never required. |
-| 9 | Domains/flows | **Zero-config auto-discovery** by default; refine via **CLI commands** (persisted in store); optional tiny `repoctx.toml` only for version-controlled definitions. |
+| 8 | Workspace discovery | **Auto-detect** git repos under the working root (zero-config); optional `becket.toml` to override — never required. |
+| 9 | Domains/flows | **Zero-config auto-discovery** by default; refine via **CLI commands** (persisted in store); optional tiny `becket.toml` only for version-controlled definitions. |
 | 10 | Cross-service | **Static + heuristic + AI inference**, edges tagged with `confidence`. No runtime tracing in v1. |
 | 11 | Telemetry | **Zero. None. Ever.** |
 | 12 | Cloud / team | **None** — strictly local. |
 | 13 | License | **Apache-2.0**; dependencies & embedding model kept license-compatible. |
-| 14 | Distribution | **Homebrew** + **npm wrapper** (`npx repoctx`) as the two primary channels; also signed GitHub Release binaries (`cargo-dist`) and `cargo install`. |
+| 14 | Distribution | **Homebrew** + **npm wrapper** (`npx becket`) as the two primary channels; also signed GitHub Release binaries (`cargo-dist`) and `cargo install`. |
 | 15 | Platforms | **macOS & Linux tier-1** (x64 + arm64, fully CI-tested); **Windows tier-2** (supported & CI-built, issues triaged after tier-1). |
 | 16 | Artifact schema | JSON Schema with `schemaVersion`, SemVer'd independently from the CLI. |
 | 17 | Knowledge model | **Three layers**: Deterministic Core (ground truth) → grounded **Repo Wiki** (markdown, MCP-authored, lazy) → **Context Assembly** (code + wiki + impact, budgeted). The graph **grounds and lints** the wiki. **Wiki-only is out of scope.** |
-| 18 | Context output | `get_context` / `repoctx context` return **real code snippets** + grounded wiki + impact within a token budget. Code is never model-generated. |
+| 18 | Context output | `get_context` / `becket context` return **real code snippets** + grounded wiki + impact within a token budget. Code is never model-generated. |
 | 19 | Adoption-first delivery | One markdown bundle per task (`--task fix\|refactor\|onboard`). Host agent orchestrates; **no RLM in core** (ADR-0007). |
 
 **v1.1 scope note (additive):** decisions #17–#18 extend, but do not alter, the locked core (#1–#16).

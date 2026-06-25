@@ -5,17 +5,17 @@
 
 ## Contesto
 
-RepoCtx deve raggiungere sviluppatori Rust, macOS/Linux nativi e ecosistema JS (`npx repoctx`) con binari firmati e installer ripetibili.
+Becket deve raggiungere sviluppatori Rust, macOS/Linux nativi e ecosistema JS (`npx becket`) con binari firmati e installer ripetibili.
 
 ## Decisione
 
 Usare **[cargo-dist](https://axodotdev.github.io/cargo-dist/)** (`dist-workspace.toml`) per:
 
 - Build cross-platform su tag `v*.*.*` → GitHub Releases
-- Installer shell, **npm** (`repoctx`, `repoctx-mcp`) e **Homebrew** (tap `GabrieleRuggieri/homebrew-repoctx`)
+- Installer shell, **npm** (`becket`, `becket-mcp`) e **Homebrew** (tap `GabrieleRuggieri/homebrew-becket`)
 - CI generata in `.github/workflows/release.yml`
 
-Canali complementari: `cargo install repoctx-cli` e build da sorgente.
+Canali complementari: `cargo install becket-cli` e build da sorgente.
 
 ## Conseguenze
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="RepoCtx — verified code graph + grounded knowledge wiki + context assembly for AI coding agents" />
-  <title>RepoCtx — AI Context & Impact Engine</title>
+  <meta name="description" content="Becket — verified code graph + grounded knowledge wiki + context assembly for AI coding agents" />
+  <title>Becket — AI Context & Impact Engine</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
   <link rel="preload" href="css/styles.css?v=4" as="style" />
   <link rel="stylesheet" href="css/styles.css?v=4" />
@@ -13,7 +13,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
-  <script>try{var t=localStorage.getItem("repoctx-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
 <body>
   <canvas id="particles" aria-hidden="true"></canvas>
@@ -24,7 +24,7 @@
     <div class="nav-inner container">
       <a href="index.html" class="logo">
         <span class="logo-mark" aria-hidden="true"></span>
-        <span>RepoCtx</span>
+        <span>Becket</span>
       </a>
       <nav class="nav-links">
         <a href="#problem" data-i18n="nav.problem">Problem</a>
@@ -59,10 +59,10 @@
           <span class="gradient-text" data-i18n="hero.title2">between code & AI</span>
         </h1>
         <p class="hero-sub" data-i18n="hero.sub">
-          RepoCtx transforms repositories into structured, queryable knowledge — giving AI agents and developers precise context, impact analysis, and architectural understanding.
+          Becket transforms repositories into structured, queryable knowledge — giving AI agents and developers precise context, impact analysis, and architectural understanding.
         </p>
         <div class="hero-cta">
-          <a href="docs.html#install" class="btn btn-primary btn-lg" data-i18n="hero.cta1">Install RepoCtx</a>
+          <a href="docs.html#install" class="btn btn-primary btn-lg" data-i18n="hero.cta1">Install Becket</a>
           <a href="docs.html" class="btn btn-glass btn-lg" data-i18n="hero.cta2">Read the Docs</a>
         </div>
         <div class="hero-stats">
@@ -86,7 +86,7 @@
             <span class="dot red"></span>
             <span class="dot yellow"></span>
             <span class="dot green"></span>
-            <span class="terminal-title">repoctx</span>
+            <span class="terminal-title">becket</span>
           </div>
           <div class="terminal-body">
             <pre><code id="typing-output"></code><span class="cursor-blink">▊</span></pre>
@@ -139,7 +139,7 @@
           <blockquote class="quote glass-card">
             <p data-i18n="solution.quote">"The right code, the right understanding, and what breaks if you change it — within your token budget."</p>
           </blockquote>
-          <p data-i18n="solution.desc">RepoCtx combines a deterministic code graph (ground truth), a graph-grounded knowledge wiki (intent & gotchas), and context assembly that returns actual source snippets — not metadata alone.</p>
+          <p data-i18n="solution.desc">Becket combines a deterministic code graph (ground truth), a graph-grounded knowledge wiki (intent & gotchas), and context assembly that returns actual source snippets — not metadata alone.</p>
           <ul class="check-list">
             <li data-i18n="solution.li1">Graph verifies the wiki — no silent drift</li>
             <li data-i18n="solution.li2">Persistent memory that compounds across sessions</li>
@@ -204,7 +204,7 @@
           <article class="feature glass-card">
             <div class="feature-num">→</div>
             <h3 data-i18n="product.p1.title">Index once</h3>
-            <p data-i18n="product.p1.desc"><code>repoctx build</code> parses symbols, calls, flows, and impact. Writes <code>.repoctx/</code> — no LLM required.</p>
+            <p data-i18n="product.p1.desc"><code>becket build</code> parses symbols, calls, flows, and impact. Writes <code>.becket/</code> — no LLM required.</p>
           </article>
           <article class="feature glass-card">
             <div class="feature-num">→</div>
@@ -274,7 +274,7 @@
         </div>
         <div class="integration glass-card">
           <h3>Claude Code</h3>
-          <p data-i18n="integrations.claude">Agents call repoctx context, impact, and flow before modifying code.</p>
+          <p data-i18n="integrations.claude">Agents call becket context, impact, and flow before modifying code.</p>
         </div>
         <div class="integration glass-card">
           <h3>OpenAI Codex</h3>
@@ -282,7 +282,7 @@
         </div>
         <div class="integration glass-card highlight">
           <h3>MCP Server</h3>
-          <p data-i18n="integrations.mcp">repoctx-mcp: get_context (code + wiki + impact), get_wiki, get_impact, get_flow, get_dependencies over stdio.</p>
+          <p data-i18n="integrations.mcp">becket-mcp: get_context (code + wiki + impact), get_wiki, get_impact, get_flow, get_dependencies over stdio.</p>
         </div>
       </div>
     </div>
@@ -293,7 +293,7 @@
     <div class="container reveal">
       <div class="cta-box glass-card">
         <h2 data-i18n="cta.title">Verified, compounding memory for AI coding agents</h2>
-        <p data-i18n="cta.sub">Like Git for version control — RepoCtx for code understanding that includes the code.</p>
+        <p data-i18n="cta.sub">Like Git for version control — Becket for code understanding that includes the code.</p>
         <a href="docs.html#install" class="btn btn-primary btn-lg" data-i18n="cta.button">Start Building Context</a>
       </div>
     </div>
@@ -304,12 +304,12 @@
     <div class="container footer-inner">
       <div class="footer-brand">
         <span class="logo-mark" aria-hidden="true"></span>
-        <span>RepoCtx</span>
+        <span>Becket</span>
       </div>
       <p class="footer-copy" data-i18n="footer.copy">Open source under Apache-2.0 · 100% local · Zero telemetry</p>
       <div class="footer-links">
         <a href="docs.html" data-i18n="footer.docs">Documentation</a>
-        <a href="https://github.com/GabrieleRuggieri/repo-ctx" data-i18n="footer.github">GitHub</a>
+        <a href="https://github.com/GabrieleRuggieri/becket" data-i18n="footer.github">GitHub</a>
       </div>
     </div>
   </footer>

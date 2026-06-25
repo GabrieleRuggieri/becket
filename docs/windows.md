@@ -1,6 +1,6 @@
 # Windows support (tier-2)
 
-RepoCtx treats **Windows** as a **tier-2** platform: binaries are built and tested in CI, but
+Becket treats **Windows** as a **tier-2** platform: binaries are built and tested in CI, but
 **Ubuntu** and **macOS** are tier-1 (required green on every PR).
 
 ## CI
@@ -17,7 +17,7 @@ releases.
 When filing a Windows-only bug, include:
 
 1. Windows version and shell (PowerShell / cmd)
-2. `repoctx --version` and Rust toolchain (`rustc -V`)
+2. `becket --version` and Rust toolchain (`rustc -V`)
 3. Minimal repro repo or workspace manifest
 4. Link to a failing `windows-tier2` CI run if available
 
@@ -26,9 +26,9 @@ Label suggestions: `platform:windows`, `tier-2`.
 ## Local development
 
 ```powershell
-$env:REPOCTX_HASH_EMBED = "1"
+$env:BECKET_HASH_EMBED = "1"
 cargo test --all
-cargo build --release --bin repoctx
+cargo build --release --bin becket
 ```
 
-Use `REPOCTX_HASH_EMBED=1` to avoid downloading ONNX embedding models during tests.
+Use `BECKET_HASH_EMBED=1` to avoid downloading ONNX embedding models during tests.

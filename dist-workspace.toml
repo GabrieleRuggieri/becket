@@ -9,8 +9,8 @@ cargo-dist-version = "0.32.0"
 ci = "github"
 # The installers to generate for each app
 installers = ["shell", "npm", "homebrew"]
-# Homebrew tap repository (create github.com/GabrieleRuggieri/homebrew-repoctx)
-tap = "GabrieleRuggieri/homebrew-repoctx"
+# Homebrew tap repository (create github.com/GabrieleRuggieri/homebrew-becket)
+tap = "GabrieleRuggieri/homebrew-becket"
 # Publish installers to package managers on stable releases
 publish-jobs = ["homebrew", "npm"]
 # Target platforms to build apps for (Rust target-triple syntax)

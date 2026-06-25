@@ -1,15 +1,15 @@
 # Packaging & distribution
 
-RepoCtx ships via **cargo-dist** (see `dist-workspace.toml` and [ADR-0004](../docs/adr/0004-cargo-dist-distribution.md)).
+Becket ships via **cargo-dist** (see `dist-workspace.toml` and [ADR-0004](../docs/adr/0004-cargo-dist-distribution.md)).
 
 ## Channels
 
 | Channel | Artifact | Notes |
 |---------|----------|-------|
 | GitHub Releases | `.tar.xz` / `.zip` per target | Triggered by git tag `v*.*.*` |
-| Homebrew | Formula in tap repo | `brew install GabrieleRuggieri/repoctx/repoctx` |
-| npm | `repoctx`, `repoctx-mcp` | `npx repoctx build` — binary downloaded at install |
-| Cargo | `repoctx-cli`, `repoctx-mcp` crates | `cargo install repoctx-cli --locked` |
+| Homebrew | Formula in tap repo | `brew install GabrieleRuggieri/becket/becket` |
+| npm | `becket`, `becket-mcp` | `npx becket build` — binary downloaded at install |
+| Cargo | `becket-cli`, `becket-mcp` crates | `cargo install becket-cli --locked` |
 
 ## Cutting a release
 
@@ -24,28 +24,28 @@ git push && git push --tags
 ```
 
 4. GitHub Actions `Release` workflow builds artifacts and publishes to GitHub Releases (+ Homebrew tap + npm when configured).
-5. Optional: `cargo publish -p repoctx-cli` and `cargo publish -p repoctx-mcp`.
+5. Optional: `cargo publish -p becket-cli` and `cargo publish -p becket-mcp`.
 
 ## Homebrew tap setup (one-time)
 
 Create an empty GitHub repository:
 
-`https://github.com/GabrieleRuggieri/homebrew-repoctx`
+`https://github.com/GabrieleRuggieri/homebrew-becket`
 
-cargo-dist publishes generated `repoctx.rb` formulas there on each stable release. Users install with:
+cargo-dist publishes generated `becket.rb` formulas there on each stable release. Users install with:
 
 ```bash
-brew tap GabrieleRuggieri/repoctx
-brew install repoctx
+brew tap GabrieleRuggieri/becket
+brew install becket
 ```
 
 ## npm packages
 
-cargo-dist generates npm wrapper packages at release time (`repoctx-cli-npm-package.tar.gz` in the release assets). The published package name is configured in `crates/repoctx-cli/Cargo.toml`:
+cargo-dist generates npm wrapper packages at release time (`becket-cli-npm-package.tar.gz` in the release assets). The published package name is configured in `crates/becket-cli/Cargo.toml`:
 
 ```toml
 [package.metadata.dist]
-npm-package = "repoctx"
+npm-package = "becket"
 ```
 
 ## Local dist development

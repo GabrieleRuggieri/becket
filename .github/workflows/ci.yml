@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  REPOCTX_HASH_EMBED: "1"
+  BECKET_HASH_EMBED: "1"
 
 jobs:
   tier1:
@@ -37,13 +37,13 @@ jobs:
         run: cargo test --all
 
       - name: Latency budget guards
-        run: cargo test -p repoctx-core --test bench_budget
+        run: cargo test -p becket-core --test bench_budget
 
       - name: Validate JSON Schema contract
-        run: cargo test -p repoctx-schema --test schema_validation
+        run: cargo test -p becket-schema --test schema_validation
 
       - name: Build release
-        run: cargo build --release --bin repoctx
+        run: cargo build --release --bin becket
 
   windows-tier2:
     name: Tier-2 (windows-latest)
@@ -60,4 +60,4 @@ jobs:
         run: cargo test --all
 
       - name: Build release
-        run: cargo build --release --bin repoctx
+        run: cargo build --release --bin becket

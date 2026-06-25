@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADR)
 
-Decisioni architetturali significative per RepoCtx. Ogni ADR è immutabile una volta accettato; nuove decisioni che lo superano ricevono un nuovo numero.
+Decisioni architetturali significative per Becket. Ogni ADR è immutabile una volta accettato; nuove decisioni che lo superano ricevono un nuovo numero.
 
 | ADR | Titolo | Stato |
 |-----|--------|-------|

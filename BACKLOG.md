@@ -1,8 +1,8 @@
-# BACKLOG.md — RepoCtx open work
+# BACKLOG.md — Becket open work
 
 > Priorità: **P0** = blocca MVP, **P1** = importante post-MVP, **P2** = nice-to-have.
 >
-> **North star:** un agente chiama `repoctx context` e riceve **un bundle unico** (markdown) con codice verificato + wiki + impact — vedi [ADR-0006](./docs/adr/0006-grounded-knowledge-wiki.md).
+> **North star:** un agente chiama `becket context` e riceve **un bundle unico** (markdown) con codice verificato + wiki + impact — vedi [ADR-0006](./docs/adr/0006-grounded-knowledge-wiki.md).
 
 ---
 
@@ -27,8 +27,8 @@
 | P1-5 | Distribuzione | `cargo-dist`, release CI, npm/homebrew | ✅ infra pronta |
 | P1-R1 | Release | Tag **v0.1.0** + tap Homebrew + smoke test install | Blocca “uso reale” |
 | P1-R2 | Docs | Guida **“Use today”** in README: build → impact → MCP in Cursor | ✅ |
-| P1-R3 | MCP | Esempio config Cursor / Claude Code (`repoctx-mcp`, `REPOCTX_ROOT`) | ✅ |
-| P1-R4 | DX | `repoctx context` migliora output **oggi**: symbol + file:line + related + `--json` stabile | ✅ |
+| P1-R3 | MCP | Esempio config Cursor / Claude Code (`becket-mcp`, `BECKET_ROOT`) | ✅ |
+| P1-R4 | DX | `becket context` migliora output **oggi**: symbol + file:line + related + `--json` stabile | ✅ |
 
 ## P1 — Knowledge Layer v0.2 (bundle unico, non LLM Wiki clone)
 
@@ -38,7 +38,7 @@
 |---|---|---|---|
 | P1-8 | Wiki | Modello pagina + frontmatter + `wiki/index.md` auto-generato da tassonomia grafo | ✅ |
 | P1-8b | Wiki | **Template a slot** — sezioni grafo compilate, slot prosa per LLM | ✅ |
-| P1-8c | Wiki | **Claim blocks** `<!-- repoctx:claim ... -->` + parser lint | ✅ |
+| P1-8c | Wiki | **Claim blocks** `<!-- becket:claim ... -->` + parser lint | ✅ |
 | P1-9 | Wiki | Graph-grounded ingest via MCP sampling (sottografo nel prompt) | ✅ `get_wiki enrich` |
 | P1-9b | Wiki | **Coda sync su `build --watch`** quando fingerprint cambia | ✅ avviso stale post-build |
 | P1-10 | Wiki | Wiki lint deterministico (stale, claims, link, orphan) → `wiki_lint.json` | ✅ `wiki lint --strict` |
@@ -58,7 +58,7 @@
 | P1-3 | Security | Secret redaction | ✅ |
 | P1-4 | Workspace | Cross-repo linker + gRPC/queue | ✅ |
 | P1-6 | Bench | Fixture + budget CI latenza | ✅ |
-| P1-7 | Watch | `repoctx build --watch` | ✅ base per P1-9b |
+| P1-7 | Watch | `becket build --watch` | ✅ base per P1-9b |
 
 ## P2 — Ecosistema
 

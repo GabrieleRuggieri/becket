@@ -1,6 +1,6 @@
-# Contributing to RepoCtx
+# Contributing to Becket
 
-Thank you for helping improve RepoCtx. This guide covers local development, the test workflow, and how to add new tree-sitter language support.
+Thank you for helping improve Becket. This guide covers local development, the test workflow, and how to add new tree-sitter language support.
 
 ## Prerequisites
 
@@ -10,8 +10,8 @@ Thank you for helping improve RepoCtx. This guide covers local development, the 
 ## Local setup
 
 ```bash
-git clone https://github.com/GabrieleRuggieri/repo-ctx.git
-cd repo-ctx
+git clone https://github.com/GabrieleRuggieri/becket.git
+cd becket
 cargo build
 cargo test --all
 ```
@@ -31,7 +31,7 @@ Optional git hooks:
 ```bash
 cargo fmt --all
 cargo clippy --all-targets --all-features -- -D warnings
-REPOCTX_HASH_EMBED=1 cargo test --all
+BECKET_HASH_EMBED=1 cargo test --all
 ```
 
 4. Update `PROGRESS.md` for notable milestones and `BACKLOG.md` when closing items
@@ -41,13 +41,13 @@ REPOCTX_HASH_EMBED=1 cargo test --all
 
 | Crate | Role |
 |---|---|
-| `repoctx-cli` | CLI (`repoctx build`, `workspace build`, `wiki`, queries) |
-| `repoctx-core` | Build pipeline, parsing, graph, workspace linker, **wiki compiler + linter** |
-| `repoctx-store` | SQLite index + JSON artifacts |
-| `repoctx-query` | Shared query engine for CLI and MCP |
-| `repoctx-schema` | Versioned artifact types + JSON Schema |
-| `repoctx-embed` | Local embeddings (hash + optional ONNX) |
-| `repoctx-mcp` | MCP stdio server |
+| `becket-cli` | CLI (`becket build`, `workspace build`, `wiki`, queries) |
+| `becket-core` | Build pipeline, parsing, graph, workspace linker, **wiki compiler + linter** |
+| `becket-store` | SQLite index + JSON artifacts |
+| `becket-query` | Shared query engine for CLI and MCP |
+| `becket-schema` | Versioned artifact types + JSON Schema |
+| `becket-embed` | Local embeddings (hash + optional ONNX) |
+| `becket-mcp` | MCP stdio server |
 
 See [CODEMAP.md](./CODEMAP.md) and [ARCHITECTURE.md](./ARCHITECTURE.md) for execution flow and design decisions.
 
@@ -55,15 +55,15 @@ See [CODEMAP.md](./CODEMAP.md) and [ARCHITECTURE.md](./ARCHITECTURE.md) for exec
 
 ## Adoption workflow (for contributors testing the tool)
 
-1. `cargo install repoctx-cli repoctx-mcp --locked` (or build from source)
-2. `repoctx build` in a fixture repo or this monorepo
-3. `repoctx context <Symbol> --budget 6000 --task fix` — verify markdown bundle
-4. `repoctx wiki lint --strict` — verify lint passes
-5. Wire `repoctx-mcp` in Cursor (see README) and confirm `get_context` / `get_wiki`
+1. `cargo install becket-cli becket-mcp --locked` (or build from source)
+2. `becket build` in a fixture repo or this monorepo
+3. `becket context <Symbol> --budget 6000 --task fix` — verify markdown bundle
+4. `becket wiki lint --strict` — verify lint passes
+5. Wire `becket-mcp` in Cursor (see README) and confirm `get_context` / `get_wiki`
 
 ## Adding a language (tree-sitter plugin)
 
-RepoCtx uses a **grammar registry** (`crates/repoctx-core/src/parse/registry.rs`) that maps file extensions to tree-sitter grammars. Built-in languages today:
+Becket uses a **grammar registry** (`crates/becket-core/src/parse/registry.rs`) that maps file extensions to tree-sitter grammars. Built-in languages today:
 
 | Language | Crate | Extensions |
 |---|---|---|
@@ -76,7 +76,7 @@ RepoCtx uses a **grammar registry** (`crates/repoctx-core/src/parse/registry.rs`
 
 ### Steps to add a compile-time language
 
-1. **Add the grammar crate** to the workspace `Cargo.toml` and `repoctx-core/Cargo.toml`:
+1. **Add the grammar crate** to the workspace `Cargo.toml` and `becket-core/Cargo.toml`:
 
 ```toml
 tree-sitter-ruby = "0.23"
@@ -98,13 +98,13 @@ registry.register_builtin(
 
 3. **Extend extraction rules** in `parse/tree_sitter.rs` if the language needs custom node handling (calls, imports, HTTP routes).
 
-4. **Add a fixture** under `tests/fixtures/<name>/` and an integration test in `crates/repoctx-core/tests/fixtures.rs`.
+4. **Add a fixture** under `tests/fixtures/<name>/` and an integration test in `crates/becket-core/tests/fixtures.rs`.
 
 5. **Run the full test suite** and update docs if the language changes public behavior.
 
 ### Extension aliases without recompiling
 
-Repositories can map extra extensions to an existing built-in grammar via `repoctx.languages.toml` at the repo root:
+Repositories can map extra extensions to an existing built-in grammar via `becket.languages.toml` at the repo root:
 
 ```toml
 [[languages]]
@@ -116,7 +116,7 @@ Unknown `id` values log a warning — dynamic `.so` grammars are not supported y
 
 ## Workspace / multi-repo development
 
-Workspaces use `repoctx.workspace.toml` at the monorepo root:
+Workspaces use `becket.workspace.toml` at the monorepo root:
 
 ```toml
 schema_version = "1.0.0"
@@ -134,17 +134,17 @@ path = "services/users"
 Build and link cross-repo edges:
 
 ```bash
-repoctx workspace build --json
+becket workspace build --json
 ```
 
-Output lands in `<workspace>/.repoctx/cross_repo.json`. See `tests/fixtures/workspace/` for a minimal example.
+Output lands in `<workspace>/.becket/cross_repo.json`. See `tests/fixtures/workspace/` for a minimal example.
 
 ## JSON Schema contract
 
-Artifact schemas live in `schemas/`. After changing `repoctx-schema` types:
+Artifact schemas live in `schemas/`. After changing `becket-schema` types:
 
 ```bash
-cargo test -p repoctx-schema write_schemas -- --ignored --nocapture
+cargo test -p becket-schema write_schemas -- --ignored --nocapture
 ```
 
 CI verifies committed schemas match generated output.
@@ -168,4 +168,4 @@ Significant design choices are recorded in [docs/adr/](./docs/adr/README.md).
 
 ## Questions
 
-Open a [GitHub issue](https://github.com/GabrieleRuggieri/repo-ctx/issues) for design questions before large refactors. For new architecture decisions, add an ADR under `docs/adr/`.
+Open a [GitHub issue](https://github.com/GabrieleRuggieri/becket/issues) for design questions before large refactors. For new architecture decisions, add an ADR under `docs/adr/`.

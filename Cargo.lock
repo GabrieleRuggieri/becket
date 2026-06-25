@@ -237,6 +237,126 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
+name = "becket-cli"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "becket-core",
+ "becket-query",
+ "becket-schema",
+ "becket-store",
+ "clap",
+ "notify",
+ "notify-debouncer-mini",
+ "serde",
+ "serde_json",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "becket-core"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "becket-embed",
+ "becket-query",
+ "becket-schema",
+ "becket-store",
+ "ignore",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "toml",
+ "tracing",
+ "tree-sitter",
+ "tree-sitter-go",
+ "tree-sitter-java",
+ "tree-sitter-javascript",
+ "tree-sitter-python",
+ "tree-sitter-rust",
+ "tree-sitter-typescript",
+]
+
+[[package]]
+name = "becket-embed"
+version = "0.2.0"
+dependencies = [
+ "becket-schema",
+ "dirs",
+ "fastembed",
+ "sha2",
+ "tracing",
+]
+
+[[package]]
+name = "becket-mcp"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "becket-core",
+ "becket-query",
+ "becket-schema",
+ "becket-store",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "becket-query"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "becket-core",
+ "becket-embed",
+ "becket-schema",
+ "becket-store",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "becket-schema"
+version = "0.2.0"
+dependencies = [
+ "jsonschema",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
+name = "becket-store"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "becket-schema",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sqlite-vec",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "zerocopy",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2620,126 +2740,6 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
-
-[[package]]
-name = "repoctx-cli"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "clap",
- "notify",
- "notify-debouncer-mini",
- "repoctx-core",
- "repoctx-query",
- "repoctx-schema",
- "repoctx-store",
- "serde",
- "serde_json",
- "toml",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "repoctx-core"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "ignore",
- "regex",
- "repoctx-embed",
- "repoctx-query",
- "repoctx-schema",
- "repoctx-store",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror",
- "toml",
- "tracing",
- "tree-sitter",
- "tree-sitter-go",
- "tree-sitter-java",
- "tree-sitter-javascript",
- "tree-sitter-python",
- "tree-sitter-rust",
- "tree-sitter-typescript",
-]
-
-[[package]]
-name = "repoctx-embed"
-version = "0.2.0"
-dependencies = [
- "dirs",
- "fastembed",
- "repoctx-schema",
- "sha2",
- "tracing",
-]
-
-[[package]]
-name = "repoctx-mcp"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "repoctx-core",
- "repoctx-query",
- "repoctx-schema",
- "repoctx-store",
- "rmcp",
- "schemars",
- "serde",
- "serde_json",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "repoctx-query"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "repoctx-core",
- "repoctx-embed",
- "repoctx-schema",
- "repoctx-store",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "repoctx-schema"
-version = "0.2.0"
-dependencies = [
- "jsonschema",
- "schemars",
- "serde",
- "serde_json",
- "thiserror",
- "toml",
-]
-
-[[package]]
-name = "repoctx-store"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "repoctx-schema",
- "rusqlite",
- "serde",
- "serde_json",
- "sqlite-vec",
- "tempfile",
- "thiserror",
- "tracing",
- "zerocopy",
-]
 
 [[package]]
 name = "reqwest"

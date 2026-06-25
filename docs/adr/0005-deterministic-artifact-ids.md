@@ -13,6 +13,6 @@ Derivare tutti gli ID da **SHA-256** su chiavi canoniche (`stable_symbol_id`, `s
 
 ## Conseguenze
 
-- Stesso input → stessi file `.repoctx/*.json` byte-per-byte.
+- Stesso input → stessi file `.becket/*.json` byte-per-byte.
 - Cambio schema o logica di hashing richiede migrazione/version bump documentato.
 - Cross-repo edge ids usano prefisso `cross_edge` con repo + symbol ids.

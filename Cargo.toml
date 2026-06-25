@@ -1,21 +1,21 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/repoctx-cli",
-    "crates/repoctx-core",
-    "crates/repoctx-embed",
-    "crates/repoctx-mcp",
-    "crates/repoctx-query",
-    "crates/repoctx-schema",
-    "crates/repoctx-store",
+    "crates/becket-cli",
+    "crates/becket-core",
+    "crates/becket-embed",
+    "crates/becket-mcp",
+    "crates/becket-query",
+    "crates/becket-schema",
+    "crates/becket-store",
 ]
 
 [workspace.package]
 version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/GabrieleRuggieri/repo-ctx"
-homepage = "https://github.com/GabrieleRuggieri/repo-ctx"
+repository = "https://github.com/GabrieleRuggieri/becket"
+homepage = "https://github.com/GabrieleRuggieri/becket"
 description = "Local codebase intelligence layer for AI agents"
 rust-version = "1.75"
 
@@ -39,11 +39,11 @@ tree-sitter-rust = "0.23"
 tree-sitter-typescript = "0.23"
 uuid = { version = "1", features = ["v4", "serde"] }
 
-repoctx-core = { path = "crates/repoctx-core" }
-repoctx-embed = { path = "crates/repoctx-embed" }
-repoctx-query = { path = "crates/repoctx-query" }
-repoctx-schema = { path = "crates/repoctx-schema" }
-repoctx-store = { path = "crates/repoctx-store" }
+becket-core = { path = "crates/becket-core" }
+becket-embed = { path = "crates/becket-embed" }
+becket-query = { path = "crates/becket-query" }
+becket-schema = { path = "crates/becket-schema" }
+becket-store = { path = "crates/becket-store" }
 regex = "1"
 rmcp = { version = "1.8", features = ["server", "transport-io", "macros"] }
 schemars = "1.2"

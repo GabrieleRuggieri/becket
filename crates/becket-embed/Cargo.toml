@@ -1,0 +1,19 @@
+[package]
+name = "becket-embed"
+description = "Local deterministic and ONNX embeddings for Becket symbols"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["onnx"]
+onnx = ["dep:fastembed", "dep:dirs"]
+
+[dependencies]
+dirs = { version = "6", optional = true }
+fastembed = { version = "5", optional = true }
+becket-schema = { workspace = true }
+sha2 = { workspace = true }
+tracing = { workspace = true }

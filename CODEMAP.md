@@ -1,4 +1,4 @@
-# CODEMAP.md — RepoCtx execution map
+# CODEMAP.md — Becket execution map
 
 > Come scorre l'esecuzione end-to-end. Aggiornare quando si aggiungono route, job o crate.
 
@@ -8,29 +8,29 @@
 
 | Binario | Crate | Ruolo |
 |---|---|---|
-| `repoctx` | `repoctx-cli` | CLI developer-facing |
-| `repoctx-mcp` | `repoctx-mcp` | MCP stdio (`get_context`, `get_wiki`, `get_impact`, `get_flow`, `get_dependencies`) |
+| `becket` | `becket-cli` | CLI developer-facing |
+| `becket-mcp` | `becket-mcp` | MCP stdio (`get_context`, `get_wiki`, `get_impact`, `get_flow`, `get_dependencies`) |
 
 ---
 
-## `repoctx build`
+## `becket build`
 
 ```
-repoctx-cli::main
+becket-cli::main
   └─ commands::execute(Build | Workspace | Wiki)
-       └─ repoctx-core::BuildPipeline::run  (single repo)
-       └─ repoctx-core::WorkspacePipeline::run  (multi-repo)
+       └─ becket-core::BuildPipeline::run  (single repo)
+       └─ becket-core::WorkspacePipeline::run  (multi-repo)
             ├─ BuildPipeline per ogni membro
             ├─ CrossRepoLinker (HTTP / gRPC / queue)
-            └─ ArtifactWriter → .repoctx/cross_repo.json
+            └─ ArtifactWriter → .becket/cross_repo.json
 ```
 
-### `repoctx build` (singolo repo)
+### `becket build` (singolo repo)
 
 ```
-repoctx-cli::main
+becket-cli::main
   └─ commands::execute(Build)
-       └─ repoctx-core::BuildPipeline::run
+       └─ becket-core::BuildPipeline::run
             ├─ FileWalker::discover
             ├─ TreeSitterParser::parse_file
             ├─ IndexStore::delete_symbols_for_path  (incremental)
@@ -42,8 +42,8 @@ repoctx-cli::main
             ├─ ArtifactWriter::write_artifact × 5
             ├─ WikiCompiler::compile_all
             └─ WikiLinter::run
-                 → .repoctx/*.json + wiki/*.md + wiki_lint.json + wiki_stale.json
-                 + .repoctx/index.db
+                 → .becket/*.json + wiki/*.md + wiki_lint.json + wiki_stale.json
+                 + .becket/index.db
 ```
 
 ---
@@ -51,16 +51,16 @@ repoctx-cli::main
 ## Query commands
 
 ```
-repoctx-cli::commands::execute
-  └─ repoctx-query::QueryEngine
+becket-cli::commands::execute
+  └─ becket-query::QueryEngine
        ├─ impact / flow / dependencies
        └─ context → assemble_context
 ```
 
-### `repoctx context` (Context Assembly)
+### `becket context` (Context Assembly)
 
 ```
-repoctx-query::assemble_context(symbol, budget, task)
+becket-query::assemble_context(symbol, budget, task)
   ├─ resolve callers / callees / impact (graph BFS)
   ├─ semantic_neighbor_ids (sqlite-vec, when embeddings indexed)
   ├─ rank: root → callers → callees → semantic → affected
@@ -69,10 +69,10 @@ repoctx-query::assemble_context(symbol, budget, task)
   └─ render markdown bundle
 ```
 
-### `repoctx wiki`
+### `becket wiki`
 
 ```
-repoctx-cli::wiki {sync|lint|show}
+becket-cli::wiki {sync|lint|show}
   ├─ sync → WikiCompiler::sync_pages (selective or --all; preserves enriched prose)
   ├─ lint → WikiLinter::run → wiki_lint.json + wiki_stale.json
   └─ show  → WikiStore::load_page / resolve by title or stem
@@ -80,12 +80,12 @@ repoctx-cli::wiki {sync|lint|show}
 
 ---
 
-## MCP (`repoctx-mcp`)
+## MCP (`becket-mcp`)
 
 ```
-repoctx-mcp::main (tokio)
+becket-mcp::main (tokio)
   └─ server::serve(stdio)
-       └─ RepoCtxMcpServer (rmcp tool_router)
+       └─ BecketMcpServer (rmcp tool_router)
             ├─ get_context  → QueryEngine::context (+ optional sampling enrichment)
             ├─ get_wiki     → WikiStore + optional enrich_wiki_prose (persists .md)
             ├─ get_impact   → QueryEngine::impact
@@ -93,7 +93,7 @@ repoctx-mcp::main (tokio)
             └─ get_dependencies → QueryEngine::dependencies
 ```
 
-Env: `REPOCTX_ROOT` (default: cwd). Richiede `repoctx build` prima.
+Env: `BECKET_ROOT` (default: cwd). Richiede `becket build` prima.
 
 ---
 
@@ -101,16 +101,16 @@ Env: `REPOCTX_ROOT` (default: cwd). Richiede `repoctx build` prima.
 
 ```mermaid
 flowchart BT
-    CLI[repoctx-cli] --> CORE[repoctx-core]
-    CLI --> QUERY[repoctx-query]
-    MCP[repoctx-mcp] --> CORE
+    CLI[becket-cli] --> CORE[becket-core]
+    CLI --> QUERY[becket-query]
+    MCP[becket-mcp] --> CORE
     MCP --> QUERY
     QUERY --> CORE
-    CORE --> STORE[repoctx-store]
+    CORE --> STORE[becket-store]
     QUERY --> STORE
-    QUERY --> EMBED[repoctx-embed]
+    QUERY --> EMBED[becket-embed]
     CORE --> EMBED
-    STORE --> SCHEMA[repoctx-schema]
+    STORE --> SCHEMA[becket-schema]
     CORE --> SCHEMA
     QUERY --> SCHEMA
 ```
@@ -121,7 +121,7 @@ flowchart BT
 
 ```
 <repo-root>/
-  .repoctx/
+  .becket/
     index.db
     architecture.json
     symbols.json

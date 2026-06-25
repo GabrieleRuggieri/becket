@@ -1,4 +1,4 @@
-# PROGRESS.md — RepoCtx development log
+# PROGRESS.md — Becket development log
 
 > Cronologia di sviluppo (work in progress e milestone completate).
 > Complementare a [BACKLOG.md](./BACKLOG.md) (cosa manca).
@@ -10,21 +10,21 @@
 ### Completato
 
 - **Workspace Rust** multi-crate allineato ad [ARCHITECTURE.md](./ARCHITECTURE.md):
-  - `repoctx-schema` — tipi artifact versionati (`schemaVersion` 1.0.0)
-  - `repoctx-store` — SQLite (`index.db`) + writer JSON `.repoctx/`
-  - `repoctx-core` — file walker, hash incrementale, estrazione euristica simboli
-  - `repoctx-query` — motori `impact`, `flow`, `context`, `dependencies`
-  - `repoctx-cli` — CLI `build | impact | flow | context | domain`
-  - `repoctx-mcp` — stub (stdio MCP da integrare con `rmcp`)
-- **Pipeline `repoctx build`**: walk → hash → parse euristico → index → emit 5 JSON
+  - `becket-schema` — tipi artifact versionati (`schemaVersion` 1.0.0)
+  - `becket-store` — SQLite (`index.db`) + writer JSON `.becket/`
+  - `becket-core` — file walker, hash incrementale, estrazione euristica simboli
+  - `becket-query` — motori `impact`, `flow`, `context`, `dependencies`
+  - `becket-cli` — CLI `build | impact | flow | context | domain`
+  - `becket-mcp` — stub (stdio MCP da integrare con `rmcp`)
+- **Pipeline `becket build`**: walk → hash → parse euristico → index → emit 5 JSON
 - **CI GitHub Actions**: fmt, clippy, test, build release (Ubuntu + macOS)
 - **LICENSE** Apache-2.0
-- **`.repoctxignore`** di esempio
+- **`.becketignore`** di esempio
 
 ### Verificato
 
 - `cargo build` e `cargo test` (4 unit test) passano
-- `repoctx build` sul repo stesso genera `.repoctx/*.json`
+- `becket build` sul repo stesso genera `.becket/*.json`
 
 ### Note
 
@@ -43,7 +43,7 @@
 - **Entrypoint detector** v0: simboli `main` → `entrypoints.json`
 - **Fix incrementale**: purge simboli per file prima del re-index
 - **Fixture sintetiche** in `tests/fixtures/` + 3 integration test
-- `repoctx impact` funziona su catene di chiamate reali
+- `becket impact` funziona su catene di chiamate reali
 
 ### Verificato
 
@@ -61,9 +61,9 @@
 
 ### Completato
 
-- **MCP server** (`repoctx-mcp`) con [rmcp](https://docs.rs/rmcp) su stdio:
+- **MCP server** (`becket-mcp`) con [rmcp](https://docs.rs/rmcp) su stdio:
   - `get_context`, `get_impact`, `get_flow`, `get_dependencies`
-  - Repo root via `REPOCTX_ROOT` o cwd
+  - Repo root via `BECKET_ROOT` o cwd
 - **`FlowReconstructor`**: auto-discovery domini da path + BFS sul call graph
 - Fixture `tests/fixtures/flows-payment/` + integration test
 - Store: `insert_flow`, `clear_flows`, `load_call_edges`
@@ -109,10 +109,10 @@
 ### Completato
 
 - **`schemas/*.schema.json`**: 5 contratti generati da `schemars` sui tipi Rust
-- **`repoctx-schema::json_schema`**: `validate_artifact_json`, `parse_artifact`, `root_schema_for`
+- **`becket-schema::json_schema`**: `validate_artifact_json`, `parse_artifact`, `root_schema_for`
 - **Test contratto**: `committed_schemas_match_generated` previene drift schema/codice
 - **Integration test**: `build_outputs_validate_against_json_schema` su tutte le fixture
-- **CI**: step dedicato `cargo test -p repoctx-schema --test schema_validation`
+- **CI**: step dedicato `cargo test -p becket-schema --test schema_validation`
 
 ### Verificato
 
@@ -121,7 +121,7 @@
 
 ### Note
 
-- Rigenerare schemi: `cargo test -p repoctx-schema write_schemas -- --ignored --nocapture`
+- Rigenerare schemi: `cargo test -p becket-schema write_schemas -- --ignored --nocapture`
 - Prossimo step consigliato: P0-7 `domain rename` / `domain add`
 
 ---
@@ -140,12 +140,12 @@
 
 ### Completato
 
-- **`repoctx domain rename`**: rinomina flow per id/nome, persiste in `domains` + `flows`
-- **`repoctx domain add`**: allega path (`src/foo/**`) o simboli, ricostruisce il flow
+- **`becket domain rename`**: rinomina flow per id/nome, persiste in `domains` + `flows`
+- **`becket domain add`**: allega path (`src/foo/**`) o simboli, ricostruisce il flow
 - **Tabella `domain_members`** + override al rebuild (`apply_domain_overrides`)
 - **`clear_all`** non cancella più i domini utente
 - Integration test: rename sopravvive a rebuild, domain add con path/symboli
-- Fixture test isolate in tempdir (no race su `.repoctx/`)
+- Fixture test isolate in tempdir (no race su `.becket/`)
 
 ### Verificato
 
@@ -202,7 +202,7 @@
 
 - **Tabella `enrichments`** in SQLite per cache lazy di summary LLM
 - **`redact.rs`**: redazione base segreti prima del sampling (API key, Bearer, sk-*, PEM)
-- **`repoctx-mcp::sampling`**: enrichment lazy via `sampling/createMessage` del host
+- **`becket-mcp::sampling`**: enrichment lazy via `sampling/createMessage` del host
   - `get_context` → `enriched_summary` opzionale
   - `get_flow` → `enriched_description` opzionale
   - Fallback deterministico se host senza sampling
@@ -223,7 +223,7 @@
 - **`bench_budget.rs`**: guardrail CI su latenza
   - rebuild incrementale dopo touch singolo file **≤ 200 ms**
   - query warm (`impact`/`context`/`flow`) **p95 ≤ 100 ms**
-- **CI**: step dedicato `cargo test -p repoctx-core --test bench_budget`
+- **CI**: step dedicato `cargo test -p becket-core --test bench_budget`
 
 ### Verificato
 
@@ -236,7 +236,7 @@
 
 ### Completato
 
-- **`repoctx-embed`**: embedding deterministico 384-dim (hash) + hook `REPOCTX_ONNX_MODEL`
+- **`becket-embed`**: embedding deterministico 384-dim (hash) + hook `BECKET_ONNX_MODEL`
 - **sqlite-vec**: tabella virtuale `symbol_vec`, KNN `nearest_symbol_ids`
 - **Build**: `index_symbol_embeddings` quando `--no-embeddings` non è attivo
 - **Query**: `semantic_neighbors` in `get_context`
@@ -253,8 +253,8 @@
 
 ### Completato
 
-- **`repoctx build --watch`**: watcher con `notify-debouncer-mini` (400ms)
-- Ignora `.repoctx`, `.git`, `target`, `node_modules`, `dist`, `build`
+- **`becket build --watch`**: watcher con `notify-debouncer-mini` (400ms)
+- Ignora `.becket`, `.git`, `target`, `node_modules`, `dist`, `build`
 - Build iniziale + rebuild incrementale su ogni burst di modifiche
 - Unit test filtro path
 
@@ -269,15 +269,15 @@
 ### Completato
 
 - **`fastembed`**: modello `BAAI/bge-small-en-v1.5` via `ort` + tokenizer Hugging Face
-- **Download lazy**: cache in `~/.cache/repoctx/models` (override `REPOCTX_EMBED_CACHE`)
-- **Fallback hash**: `REPOCTX_HASH_EMBED=1` forza embedder deterministico (CI)
-- **`REPOCTX_ONNX_MODEL`**: supporto modello custom (directory o `.onnx` + tokenizer files)
+- **Download lazy**: cache in `~/.cache/becket/models` (override `BECKET_EMBED_CACHE`)
+- **Fallback hash**: `BECKET_HASH_EMBED=1` forza embedder deterministico (CI)
+- **`BECKET_ONNX_MODEL`**: supporto modello custom (directory o `.onnx` + tokenizer files)
 - **`preload_onnx_model()`** chiamato all'inizio della fase embeddings in build
-- Feature `onnx` (default) in `repoctx-embed`
+- Feature `onnx` (default) in `becket-embed`
 
 ### Verificato
 
-- 49 test passano con `REPOCTX_HASH_EMBED=1` in CI
+- 49 test passano con `BECKET_HASH_EMBED=1` in CI
 - `cargo clippy --all-features` pulito
 
 ---
@@ -286,16 +286,16 @@
 
 ### Completato
 
-- **P1-4 Workspace**: `repoctx.workspace.toml`, `repoctx workspace build`, `CrossRepoLinker`
+- **P1-4 Workspace**: `becket.workspace.toml`, `becket workspace build`, `CrossRepoLinker`
 - **HTTP cross-repo**: match client (`axios`/`fetch`/`requests`) ↔ server route entrypoints
 - **Artifact** `cross_repo.json` + JSON Schema in `schemas/`
-- **P2-1 Grammar registry**: `GrammarRegistry::builtins()`, override `repoctx.languages.toml`
+- **P2-1 Grammar registry**: `GrammarRegistry::builtins()`, override `becket.languages.toml`
 - **P2-2 Docs**: `CONTRIBUTING.md` con guida plugin lingue
 - Fixture `tests/fixtures/workspace/` + integration test
 
 ### Verificato
 
-- 57 test passano (`REPOCTX_HASH_EMBED=1`)
+- 57 test passano (`BECKET_HASH_EMBED=1`)
 - `cargo clippy --all-features` pulito
 
 ---
@@ -305,7 +305,7 @@
 ### Completato
 
 - **P1-5 cargo-dist**: `dist-workspace.toml`, `[profile.dist]`, `.github/workflows/release.yml`
-- Installer **shell**, **npm** (`repoctx`, `repoctx-mcp`), **Homebrew** (tap `GabrieleRuggieri/homebrew-repoctx`)
+- Installer **shell**, **npm** (`becket`, `becket-mcp`), **Homebrew** (tap `GabrieleRuggieri/homebrew-becket`)
 - `packaging/README.md` con workflow release
 - **P2-3 ADR**: `docs/adr/` ADR 0001–0005 + indice
 - README: sezione install (brew / npm / cargo / releases)
@@ -331,7 +331,7 @@
 
 ### Verificato
 
-- 60 test passano (`REPOCTX_HASH_EMBED=1`)
+- 60 test passano (`BECKET_HASH_EMBED=1`)
 - `cargo clippy --all-features` pulito
 
 ---
@@ -342,7 +342,7 @@
 
 - **ADR-0006**: modello a 3 layer (Deterministic Core → Grounded Repo Wiki → Context Assembly)
 - **ARCHITECTURE.md v1.1**: §3.5 wiki, §3.6 context assembly, decisioni #17–#18
-- **README.md**: visione aggiornata — codice in contesto, wiki verificata, confronto RAG vs LLM Wiki vs RepoCtx
+- **README.md**: visione aggiornata — codice in contesto, wiki verificata, confronto RAG vs LLM Wiki vs Becket
 - **BACKLOG.md**: epic P1-8 … P1-13 (Knowledge Layer) + P2-5/P2-6
 - **Website** (`website/`): index + docs + i18n EN/IT — sezione tre layer, tabella comparativa, CLI wiki/context aggiornati
 - **CODEMAP.md**: roadmap esecuzione wiki + context assembly (planned)
@@ -382,9 +382,9 @@ Documentazione allineata a **cosa funziona oggi** (impact, flow, MCP) e **north 
 
 ### Completato
 
-- **`repoctx-query::assemble`**: snippet reali da disco, callers/callees, impact, packing a budget token
+- **`becket-query::assemble`**: snippet reali da disco, callers/callees, impact, packing a budget token
 - **`ContextResult` esteso**: `snippets`, `markdown`, `task`, `budget_tokens`
-- **CLI** `repoctx context --budget 6000 --task fix` → output markdown (default), `--json` per tooling
+- **CLI** `becket context --budget 6000 --task fix` → output markdown (default), `--json` per tooling
 - **MCP `get_context`**: restituisce markdown bundle (non solo metadata JSON)
 - Test integrazione `context_assembly_includes_code_snippets` su fixture flows-payment
 
@@ -423,7 +423,7 @@ Documentazione allineata a **cosa funziona oggi** (impact, flow, MCP) e **north 
 - **Compiler**: step 1-based, `see_also` tra pagine correlate, sync selettivo con prose preservata
 - **Lint**: claim `calls` strict (edge diretto con simboli ancorati)
 - **Context**: wiki sanitizzata (no claim HTML, no placeholder vuoto)
-- **MCP enrich**: persiste prose su `.repoctx/wiki/*.md`
+- **MCP enrich**: persiste prose su `.becket/wiki/*.md`
 - **Test**: prose merge, sanitize, sync, context senza claim comments
 - **README**: allineato a v0.2 shipped
 

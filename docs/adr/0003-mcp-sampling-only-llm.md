@@ -5,11 +5,11 @@
 
 ## Contesto
 
-Nomi di dominio e summary leggibili richiedono testo generato da LLM, ma RepoCtx deve restare local-first senza API key, Ollama o provider remoti bundled.
+Nomi di dominio e summary leggibili richiedono testo generato da LLM, ma Becket deve restare local-first senza API key, Ollama o provider remoti bundled.
 
 ## Decisione
 
-**Nessun LLM bundled.** L'enrichment testuale avviene **esclusivamente via MCP sampling** (modello dell'host: Cursor, Claude Code, ecc.), con cache SQLite lazy al primo accesso. `repoctx build` non richiede mai un modello.
+**Nessun LLM bundled.** L'enrichment testuale avviene **esclusivamente via MCP sampling** (modello dell'host: Cursor, Claude Code, ecc.), con cache SQLite lazy al primo accesso. `becket build` non richiede mai un modello.
 
 ## Conseguenze
 
