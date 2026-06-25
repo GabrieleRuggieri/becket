@@ -1,6 +1,5 @@
 # ===== Becket (tool output) =====
 .becket/
-.repoctx/
 
 # ===== Rust =====
 /target/
