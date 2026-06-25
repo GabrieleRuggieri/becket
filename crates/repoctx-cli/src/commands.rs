@@ -147,60 +147,70 @@ pub fn execute(cli: Cli) -> Result<()> {
                 );
             }
         },
-        Commands::Wiki { action } => match action {
-            WikiAction::Sync { all } => {
-                let paths = RepoCtxPaths::new(&cli.repo);
-                let store = IndexStore::open(&paths.index_db)
-                    .context("index missing — run `repoctx build` first")?;
-                let compiler = WikiCompiler::new(paths.clone());
-                let page_ids = if all {
-                    Vec::new()
-                } else {
-                    load_stale_queue(&paths)?
-                };
-                let count = compiler.sync_pages(&store, &page_ids)?;
-                println!("wiki sync complete: {count} page(s) recompiled");
-            }
-            WikiAction::Lint { json, strict } => {
-                let paths = RepoCtxPaths::new(&cli.repo);
-                let store = IndexStore::open(&paths.index_db)
-                    .context("index missing — run `repoctx build` first")?;
-                let report = WikiLinter::new(paths).run(&store)?;
-                if json {
-                    print_json(&report)?;
-                } else {
-                    println!(
-                        "wiki lint: {} stale, {} claim errors, {} broken links, {} orphans",
-                        report.stale_page_ids.len(),
-                        report.claim_errors.len(),
-                        report.broken_links.len(),
-                        report.orphan_page_ids.len()
+        Commands::Wiki { action } => {
+            match action {
+                WikiAction::Sync { all } => {
+                    let paths = RepoCtxPaths::new(&cli.repo);
+                    let store = IndexStore::open(&paths.index_db)
+                        .context("index missing — run `repoctx build` first")?;
+                    let compiler = WikiCompiler::new(paths.clone());
+                    let page_ids = if all {
+                        Vec::new()
+                    } else {
+                        load_stale_queue(&paths)?
+                    };
+                    let count = compiler.sync_pages(&store, &page_ids)?;
+                    if all {
+                        println!("wiki sync: recompiled all {count} page(s) (structure; prose preserved)");
+                    } else if page_ids.is_empty() {
+                        println!("wiki sync: no stale pages in queue (use --all to recompile everything)");
+                    } else {
+                        println!(
+                        "wiki sync: recompiled {count} stale page(s) (structure; prose preserved)"
                     );
+                    }
                 }
-                if strict
-                    && (!report.stale_page_ids.is_empty()
-                        || !report.claim_errors.is_empty()
-                        || !report.broken_links.is_empty())
-                {
-                    bail!("wiki lint failed (--strict)");
+                WikiAction::Lint { json, strict } => {
+                    let paths = RepoCtxPaths::new(&cli.repo);
+                    let store = IndexStore::open(&paths.index_db)
+                        .context("index missing — run `repoctx build` first")?;
+                    let report = WikiLinter::new(paths).run(&store)?;
+                    if json {
+                        print_json(&report)?;
+                    } else {
+                        println!(
+                            "wiki lint: {} stale, {} claim errors, {} broken links, {} orphans",
+                            report.stale_page_ids.len(),
+                            report.claim_errors.len(),
+                            report.broken_links.len(),
+                            report.orphan_page_ids.len()
+                        );
+                    }
+                    if strict
+                        && (!report.stale_page_ids.is_empty()
+                            || !report.claim_errors.is_empty()
+                            || !report.broken_links.is_empty())
+                    {
+                        bail!("wiki lint failed (--strict)");
+                    }
+                }
+                WikiAction::Show { page, json } => {
+                    let paths = RepoCtxPaths::new(&cli.repo);
+                    let wiki_store = WikiStore::new(&paths);
+                    let loaded = resolve_wiki_page(&wiki_store, &page)?
+                        .with_context(|| format!("wiki page not found: {page}"))?;
+                    if json {
+                        print_json(&loaded)?;
+                    } else {
+                        println!(
+                            "---\n{}\n---\n\n{}",
+                            toml::to_string(&loaded.meta)?,
+                            loaded.body
+                        );
+                    }
                 }
             }
-            WikiAction::Show { page, json } => {
-                let paths = RepoCtxPaths::new(&cli.repo);
-                let wiki_store = WikiStore::new(&paths);
-                let loaded = resolve_wiki_page(&wiki_store, &page)?
-                    .with_context(|| format!("wiki page not found: {page}"))?;
-                if json {
-                    print_json(&loaded)?;
-                } else {
-                    println!(
-                        "---\n{}\n---\n\n{}",
-                        toml::to_string(&loaded.meta)?,
-                        loaded.body
-                    );
-                }
-            }
-        },
+        }
     }
     Ok(())
 }

@@ -412,3 +412,21 @@ Documentazione allineata a **cosa funziona oggi** (impact, flow, MCP) e **north 
 ### Verificato
 
 - `cargo test --all` verde
+
+---
+
+## 2026-06-25 — Sessione 22: wiki quality hardening (pre-release)
+
+### Completato
+
+- **`wiki/util`**: nomi leggibili, merge prose, `sanitize_for_context` per bundle agenti
+- **Compiler**: step 1-based, `see_also` tra pagine correlate, sync selettivo con prose preservata
+- **Lint**: claim `calls` strict (edge diretto con simboli ancorati)
+- **Context**: wiki sanitizzata (no claim HTML, no placeholder vuoto)
+- **MCP enrich**: persiste prose su `.repoctx/wiki/*.md`
+- **Test**: prose merge, sanitize, sync, context senza claim comments
+- **README**: allineato a v0.2 shipped
+
+### Verificato
+
+- `cargo test --all` + `cargo clippy -D warnings` verdi

@@ -21,20 +21,22 @@ It acts as a bridge between:
 
 ---
 
-## Use today (v0.1 — shipped)
+## Use today (v0.2 — shipped)
 
-These work **now**, with no LLM required:
+These work **now**. No bundled LLM — optional prose enrichment uses your MCP host's model.
 
 | Command / tool | What you get |
 |---|---|
-| `repoctx build` | Deterministic graph: symbols, deps, flows, entrypoints → `.repoctx/*.json` |
+| `repoctx build` | Deterministic graph + **grounded wiki** → `.repoctx/*.json` + `.repoctx/wiki/` |
 | `repoctx impact <symbol>` | What breaks downstream (call graph + modules) |
 | `repoctx flow <domain>` | End-to-end execution path across services |
-| `repoctx context <symbol>` | Symbol metadata, neighbors, related components (JSON) |
-| `repoctx build --watch` | Incremental rebuild on file changes |
+| `repoctx context <symbol>` | **Markdown bundle**: wiki + real code snippets + impact (`--budget`, `--task`) |
+| `repoctx wiki sync\|lint\|show` | Recompile stale pages, CI lint, view grounded pages |
+| `repoctx build --watch` | Incremental rebuild; warns when wiki pages go stale |
 | `repoctx workspace build` | Cross-repo linking (HTTP/gRPC/queue) |
-| MCP `get_impact`, `get_flow`, `get_dependencies` | Same queries for Cursor / Claude Code agents |
-| MCP `get_context` | Metadata bundle + optional MCP sampling enrichment |
+| MCP `get_context` | Same markdown bundle for agents |
+| MCP `get_wiki` | Grounded wiki page; `enrich=true` fills prose via sampling |
+| MCP `get_impact`, `get_flow`, `get_dependencies` | Same queries for Cursor / Claude Code |
 
 ### Quick start (3 steps)
 
@@ -46,9 +48,9 @@ cargo install repoctx-cli repoctx-mcp --locked
 # 2. Index your repo
 cd your-project && repoctx build
 
-# 3. Query before you edit
-repoctx impact PaymentService
-repoctx flow payment
+# 3. Get agent-ready context before you edit
+repoctx context PaymentService --budget 6000 --task fix
+repoctx wiki lint --strict   # optional CI gate
 ```
 
 ### Cursor / Claude Code (MCP)
@@ -68,23 +70,18 @@ Add to your MCP config (`.cursor/mcp.json` or Claude Code settings):
 }
 ```
 
-Run `repoctx build` once per repo (or use `repoctx build --watch` in a terminal). The agent can then call `get_impact` / `get_flow` / `get_context` before modifying code.
+Run `repoctx build` once per repo (or use `repoctx build --watch` in a terminal). The agent can call `get_context` / `get_wiki` / `get_impact` before modifying code.
+
+### Wiki prose enrichment
+
+- `repoctx wiki sync` — recompiles **structure** from the graph (preserves enriched prose)
+- MCP `get_wiki` with `enrich=true` — fills intent/gotchas via host model and **persists** to `.repoctx/wiki/`
 
 ---
 
-## Coming in v0.2 (Knowledge Layer)
+## Legacy v0.1 surface
 
-Planned — see [BACKLOG.md](./BACKLOG.md) P1-8 … P1-15:
-
-| Feature | Deliverable |
-|---|---|
-| Context Assembly | `repoctx context X --format md --budget 6000 --task fix` → **one markdown file** with real code snippets + impact |
-| Grounded Repo Wiki | `.repoctx/wiki/*.md` anchored to symbol IDs, compiled from the graph |
-| Wiki lint | Stale/contradiction detection vs live graph (`repoctx wiki lint`) |
-| Watch → wiki sync | `build --watch` queues stale pages for re-sync |
-| MCP `get_wiki` | Fetch grounded wiki pages |
-
-Until v0.2, `get_context` returns structured metadata (symbol, file:line, neighbors) — not full source snippets yet. Use `impact` + `flow` for the highest-value queries today.
+Impact, flow, and MCP queries were the primary v0.1 workflow. They remain fully supported; v0.2 adds the wiki layer and markdown context bundle on top.
 
 ---
 
@@ -175,7 +172,7 @@ Generates:
   flows.json
   dependencies.json
   entrypoints.json
-  wiki/               # (v0.2) grounded knowledge pages
+  wiki/               # grounded knowledge pages (symbol-anchored)
     index.md
     <page>.md
 ```
@@ -184,18 +181,18 @@ The JSON artifacts are produced deterministically with **no model required**.
 
 ---
 
-### Knowledge wiki *(planned v0.2)*
+### Knowledge wiki
 
 ```bash
-repoctx wiki sync     # create/update pages for changed areas (lazy, via MCP host)
+repoctx wiki sync     # recompile stale pages (structure; preserves enriched prose)
 repoctx wiki lint     # flag stale, contradictory, or orphan pages against the graph
-repoctx wiki show OrderService
+repoctx wiki show payment
 ```
 
 `lint` is the differentiator: because the deterministic graph is ground truth, RepoCtx can detect when
-a page claims a relationship the code no longer has.
+a page claims a relationship the code no longer has. Use `wiki lint --strict` in CI.
 
----
+Prose enrichment: MCP `get_wiki` with `enrich=true` (host model required).
 
 ### Query impact of changes
 
@@ -226,27 +223,18 @@ Output:
 
 ### Generate AI-ready context
 
-**Today (v0.1):**
-
 ```bash
-repoctx context PaymentService --json
-```
-
-Returns symbol metadata, file location, related components, and semantic neighbors.
-
-**Planned (v0.2):**
-
-```bash
-repoctx context PaymentService --format md --budget 6000 --task fix
+repoctx context PaymentService --budget 6000 --task fix
+repoctx context PaymentService --json   # structured output for tooling
 ```
 
 One markdown bundle within the token budget:
 
-- relevant **wiki page** (intent, conventions, gotchas)
+- relevant **wiki page** (intent, conventions, gotchas when enriched)
 - **actual code snippets** (callers/callees, sliced from disk)
 - **impact set** and related tests
 
-This is the primary agent deliverable — one file, not four tools to orchestrate.
+Task modes: `fix` (default), `refactor`, `onboard`.
 
 ---
 
@@ -258,13 +246,13 @@ Code-derived symbols, dependencies, calls, flows and entry points — measured, 
 ### 2. Impact Analysis Engine
 Determines what breaks when a component changes.
 
-### 3. Grounded Knowledge Wiki *(v0.2)*
+### 3. Grounded Knowledge Wiki
 A persistent, compounding markdown knowledge base, anchored to real symbols and lint-checked against
 the graph so it can't silently drift from the code.
 
-### 4. Context Assembly *(v0.2 — metadata today)*
+### 4. Context Assembly
 Returns the right code snippets plus the right understanding for a task, packed within a token budget.
-Today: symbol metadata via `context`; v0.2: markdown bundle with real snippets.
+Markdown bundle by default; `--json` for tooling.
 
 ### 5. Repository Memory Layer
 Maintains persistent structural *and* semantic understanding across sessions.
@@ -323,8 +311,8 @@ repoctx-mcp
 
 Available tools:
 - **get_impact**, **get_flow**, **get_dependencies** — shipped
-- **get_context** — shipped (metadata + optional sampling enrichment; full snippet bundle in v0.2)
-- **get_wiki** — planned v0.2
+- **get_context** — markdown bundle (wiki + snippets + impact); optional MCP sampling enrichment
+- **get_wiki** — grounded wiki page; `enrich=true` for prose via host model
 
 This allows seamless integration with modern AI agents. Wiki authoring/enrichment runs through the
 host agent's model via **MCP sampling** — RepoCtx bundles no LLM and holds no API keys.

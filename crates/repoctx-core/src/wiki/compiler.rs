@@ -9,6 +9,9 @@ use repoctx_store::{IndexStore, RepoCtxPaths};
 use crate::error::CoreError;
 use crate::wiki::fingerprint::subgraph_fingerprint;
 use crate::wiki::store::WikiStore;
+use crate::wiki::util::{
+    format_call_edge, merge_preserved_prose, prose_slot, sym_name, symbol_name_map,
+};
 
 /// Compiles wiki pages from the deterministic graph.
 pub struct WikiCompiler {
@@ -23,20 +26,72 @@ impl WikiCompiler {
 
     /// Compiles all wiki pages and `index.md`. Returns number of pages written.
     pub fn compile_all(&self, store: &IndexStore) -> Result<usize, CoreError> {
+        self.write_pages(store, &[], false)
+    }
+
+    /// Recompiles stale pages (or all when `page_ids` is empty), preserving enriched prose.
+    pub fn sync_pages(&self, store: &IndexStore, page_ids: &[String]) -> Result<usize, CoreError> {
+        self.write_pages(store, page_ids, true)
+    }
+
+    fn write_pages(
+        &self,
+        store: &IndexStore,
+        only_ids: &[String],
+        preserve_prose: bool,
+    ) -> Result<usize, CoreError> {
+        let wiki_store = WikiStore::new(&self.paths);
+        wiki_store.ensure_dir()?;
+
+        let mut pages = self.build_pages(store)?;
+        wire_see_also(&mut pages);
+
+        let filter: HashSet<&str> = only_ids.iter().map(String::as_str).collect();
+        let write_all = only_ids.is_empty();
+
+        let index_body = render_index(&pages);
+        let index_meta = WikiPageMeta {
+            id: "wiki_index".into(),
+            kind: WikiPageKind::Overview,
+            symbol_ids: Vec::new(),
+            source: WikiPageSource::Deterministic,
+            graph_fingerprint: "index".into(),
+            see_also: pages.iter().map(|(m, _)| m.id.clone()).collect(),
+            title: "Repo Wiki Index".into(),
+        };
+        wiki_store.write_index(&index_meta, &index_body)?;
+
+        let mut count = 1usize;
+        for (meta, body) in &pages {
+            if !write_all && !filter.contains(meta.id.as_str()) {
+                continue;
+            }
+            let final_body = if preserve_prose {
+                if let Ok(Some(existing)) = wiki_store.load_page(&meta.id) {
+                    merge_preserved_prose(&existing.body, body)
+                } else {
+                    body.clone()
+                }
+            } else {
+                body.clone()
+            };
+            wiki_store.write_page(meta, &final_body)?;
+            count += 1;
+        }
+
+        Ok(count)
+    }
+
+    fn build_pages(&self, store: &IndexStore) -> Result<Vec<(WikiPageMeta, String)>, CoreError> {
         let symbols = store.load_symbols()?;
         let (_, _, flows_art, entrypoints_art, architecture) = store.export_artifacts()?;
         let flows = &flows_art.flows;
         let entrypoints = &entrypoints_art.entrypoints;
         let call_edges = store.load_call_edges()?;
+        let names = symbol_name_map(&symbols);
 
-        let id_to_symbol: HashMap<&str, &SymbolRecord> =
-            symbols.iter().map(|s| (s.id.as_str(), s)).collect();
-        let _ = id_to_symbol;
         let entrypoint_symbols: HashSet<&str> =
             entrypoints.iter().map(|e| e.symbol_id.as_str()).collect();
-
-        let wiki_store = WikiStore::new(&self.paths);
-        wiki_store.ensure_dir()?;
 
         let mut pages: Vec<(WikiPageMeta, String)> = Vec::new();
 
@@ -51,7 +106,7 @@ impl WikiCompiler {
                 see_also: Vec::new(),
                 title: format!("Flow: {}", flow.name),
             };
-            let body = render_flow_body(flow, &symbols, &call_edges);
+            let body = render_flow_body(flow, &names, &call_edges);
             pages.push((meta, body));
         }
 
@@ -65,7 +120,7 @@ impl WikiCompiler {
                 see_also: Vec::new(),
                 title: format!("Module: {}", module.name),
             };
-            let body = render_module_body(module, &symbols, store)?;
+            let body = render_module_body(module, &symbols, &names, store)?;
             pages.push((meta, body));
         }
 
@@ -83,38 +138,40 @@ impl WikiCompiler {
                 see_also: Vec::new(),
                 title: format!("Service: {}", symbol.name),
             };
-            let body = render_service_body(symbol, store, &call_edges)?;
+            let body = render_service_body(symbol, &symbols, &names, store, &call_edges)?;
             pages.push((meta, body));
         }
 
-        let index_body = render_index(&pages);
-        let index_meta = WikiPageMeta {
-            id: "wiki_index".into(),
-            kind: WikiPageKind::Overview,
-            symbol_ids: Vec::new(),
-            source: WikiPageSource::Deterministic,
-            graph_fingerprint: "index".into(),
-            see_also: pages.iter().map(|(m, _)| m.id.clone()).collect(),
-            title: "Repo Wiki Index".into(),
-        };
-        wiki_store.write_index(&index_meta, &index_body)?;
-
-        let mut count = 1usize;
-        for (meta, body) in &pages {
-            wiki_store.write_page(meta, body)?;
-            count += 1;
-        }
-
-        Ok(count)
+        Ok(pages)
     }
+}
 
-    /// Recompiles pages whose ids are listed in `page_ids` (or all if empty).
-    pub fn sync_pages(&self, store: &IndexStore, page_ids: &[String]) -> Result<usize, CoreError> {
-        if page_ids.is_empty() {
-            return self.compile_all(store);
+/// Links flow ↔ service ↔ module pages via `see_also`.
+fn wire_see_also(pages: &mut [(WikiPageMeta, String)]) {
+    let sym_to_pages: HashMap<String, Vec<String>> = {
+        let mut map: HashMap<String, Vec<String>> = HashMap::new();
+        for (meta, _) in pages.iter() {
+            for sym in &meta.symbol_ids {
+                map.entry(sym.clone()).or_default().push(meta.id.clone());
+            }
         }
-        self.compile_all(store)?;
-        Ok(page_ids.len())
+        map
+    };
+
+    for (meta, _) in pages.iter_mut() {
+        let mut links: HashSet<String> = HashSet::new();
+        for sym in &meta.symbol_ids {
+            if let Some(related) = sym_to_pages.get(sym) {
+                for id in related {
+                    if id != &meta.id {
+                        links.insert(id.clone());
+                    }
+                }
+            }
+        }
+        let mut see_also: Vec<String> = links.into_iter().collect();
+        see_also.sort();
+        meta.see_also = see_also;
     }
 }
 
@@ -140,7 +197,7 @@ fn render_index(pages: &[(WikiPageMeta, String)]) -> String {
         let Some(items) = by_kind.get(&kind) else {
             continue;
         };
-        md.push_str(&format!("## {:?}\n\n", kind));
+        md.push_str(&format!("## {kind:?}\n\n"));
         for meta in items {
             let stem = meta.id.strip_prefix("wiki_").unwrap_or(&meta.id);
             md.push_str(&format!("- [{title}]({stem}.md)\n", title = meta.title));
@@ -152,22 +209,17 @@ fn render_index(pages: &[(WikiPageMeta, String)]) -> String {
 
 fn render_flow_body(
     flow: &FlowRecord,
-    symbols: &[SymbolRecord],
+    names: &HashMap<&str, &str>,
     call_edges: &[(String, String)],
 ) -> String {
-    let id_to_name: HashMap<&str, &str> = symbols
-        .iter()
-        .map(|s| (s.id.as_str(), s.name.as_str()))
-        .collect();
     let mut md = format!("# {}\n\n## Execution path\n\n", flow.name);
     for step in &flow.steps {
-        let name = id_to_name
-            .get(step.symbol_id.as_str())
-            .copied()
-            .unwrap_or(&step.symbol_id);
+        let name = sym_name(&step.symbol_id, names);
         md.push_str(&format!(
             "{}. **{}** (`{}`)\n",
-            step.order, name, step.symbol_id
+            step.order + 1,
+            name,
+            step.symbol_id
         ));
         if let Some(ext) = &step.external_system {
             md.push_str(&format!("   - external: {ext}\n"));
@@ -177,18 +229,17 @@ fn render_flow_body(
     let flow_ids: HashSet<&str> = flow.steps.iter().map(|s| s.symbol_id.as_str()).collect();
     for (src, dst) in call_edges {
         if flow_ids.contains(src.as_str()) && flow_ids.contains(dst.as_str()) {
-            md.push_str(&format!(
-                "<!-- repoctx:claim calls {dst} source=graph -->\n- `{src}` → `{dst}`\n"
-            ));
+            md.push_str(&format_call_edge(src, dst, names));
         }
     }
-    md.push_str(prose_slot());
+    md.push_str(&prose_slot());
     md
 }
 
 fn render_module_body(
     module: &ModuleRecord,
     symbols: &[SymbolRecord],
+    names: &HashMap<&str, &str>,
     store: &IndexStore,
 ) -> Result<String, CoreError> {
     let mut md = format!("# {}\n\n## Symbols\n\n", module.name);
@@ -206,20 +257,26 @@ fn render_module_body(
         let downstream = store.downstream_symbols(sym_id, 1)?;
         if !downstream.is_empty() {
             md.push_str(&format!(
-                "- `{sym_id}` affects {} symbols (depth 1)\n",
+                "- **{}** affects {} symbols (depth 1)\n",
+                sym_name(sym_id, names),
                 downstream.len()
             ));
         }
     }
-    md.push_str(prose_slot());
+    md.push_str(&prose_slot());
     Ok(md)
 }
 
 fn render_service_body(
     symbol: &SymbolRecord,
+    symbols: &[SymbolRecord],
+    names: &HashMap<&str, &str>,
     store: &IndexStore,
     call_edges: &[(String, String)],
 ) -> Result<String, CoreError> {
+    let id_to_sym: HashMap<&str, &SymbolRecord> =
+        symbols.iter().map(|s| (s.id.as_str(), s)).collect();
+
     let mut md = format!(
         "# {}\n\n## Structure\n\n**Location:** `{}:{}-{}`\n\n",
         symbol.name, symbol.file_path, symbol.start_line, symbol.end_line
@@ -234,9 +291,7 @@ fn render_service_body(
         md.push_str("_None detected._\n\n");
     } else {
         for (src, dst) in callers {
-            md.push_str(&format!(
-                "<!-- repoctx:claim calls {src} source=graph -->\n- `{src}` → `{dst}`\n"
-            ));
+            md.push_str(&format_call_edge(src, dst, names));
         }
         md.push('\n');
     }
@@ -250,9 +305,7 @@ fn render_service_body(
         md.push_str("_None detected._\n\n");
     } else {
         for (src, dst) in callees {
-            md.push_str(&format!(
-                "<!-- repoctx:claim calls {dst} source=graph -->\n- `{src}` → `{dst}`\n"
-            ));
+            md.push_str(&format_call_edge(src, dst, names));
         }
         md.push('\n');
     }
@@ -263,7 +316,14 @@ fn render_service_body(
         md.push_str("_No downstream symbols within depth 2._\n\n");
     } else {
         for id in affected.iter().take(15) {
-            md.push_str(&format!("- `{id}`\n"));
+            if let Some(sym) = id_to_sym.get(id.as_str()) {
+                md.push_str(&format!(
+                    "- **{}** — `{}:{}-{}`\n",
+                    sym.name, sym.file_path, sym.start_line, sym.end_line
+                ));
+            } else {
+                md.push_str(&format!("- **{}**\n", sym_name(id, names)));
+            }
         }
         if affected.len() > 15 {
             md.push_str(&format!("\n_…and {} more_\n", affected.len() - 15));
@@ -271,10 +331,6 @@ fn render_service_body(
         md.push('\n');
     }
 
-    md.push_str(prose_slot());
+    md.push_str(&prose_slot());
     Ok(md)
-}
-
-fn prose_slot() -> &'static str {
-    "\n## Intent & gotchas\n\n<!-- repoctx:slot prose -->\n_Awaiting enrichment via `repoctx wiki sync` or MCP sampling._\n"
 }

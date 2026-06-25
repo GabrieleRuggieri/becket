@@ -142,20 +142,27 @@ pub fn load_page_from_path(path: &Path) -> Result<WikiPage, CoreError> {
     parse_page(&raw)
 }
 
-/// Finds a wiki page whose frontmatter anchors `symbol_id`.
+/// Finds the best wiki page whose frontmatter anchors `symbol_id`.
 pub fn find_page_for_symbol(
     store: &WikiStore,
     symbol_id: &str,
 ) -> Result<Option<WikiPage>, CoreError> {
+    use crate::wiki::util::page_kind_priority;
+
+    let mut best: Option<(u8, WikiPage)> = None;
     for id in store.list_page_ids()? {
         let page = store
             .load_page(&id)?
             .ok_or_else(|| CoreError::Wiki(format!("missing page {id}")))?;
-        if page.meta.symbol_ids.iter().any(|s| s == symbol_id) {
-            return Ok(Some(page));
+        if !page.meta.symbol_ids.iter().any(|s| s == symbol_id) {
+            continue;
+        }
+        let priority = page_kind_priority(page.meta.kind);
+        if best.as_ref().map_or(true, |(p, _)| priority < *p) {
+            best = Some((priority, page));
         }
     }
-    Ok(None)
+    Ok(best.map(|(_, p)| p))
 }
 
 #[cfg(test)]

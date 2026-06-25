@@ -33,30 +33,25 @@ impl WikiLinter {
         let claim_re = Regex::new(r"<!--\s*repoctx:claim\s+(\w+)\s+(\S+)").unwrap();
 
         for page_id in &known_ids {
-            let Some(mut page) = wiki_store.load_page(page_id)? else {
+            let Some(page) = wiki_store.load_page(page_id)? else {
                 continue;
             };
             let live_fp = subgraph_fingerprint(store, &page.meta.symbol_ids)?;
             if page.meta.graph_fingerprint != live_fp {
                 report.stale_page_ids.push(page.meta.id.clone());
-                page.stale = true;
             }
+
+            let anchors: HashSet<&str> = page.meta.symbol_ids.iter().map(|s| s.as_str()).collect();
 
             for cap in claim_re.captures_iter(&page.body) {
                 let claim_type = cap.get(1).map(|m| m.as_str()).unwrap_or("");
                 let target = cap.get(2).map(|m| m.as_str()).unwrap_or("");
-                if claim_type == "calls" {
-                    let valid = page.meta.symbol_ids.iter().any(|src| {
-                        edge_set.contains(&(src.clone(), target.to_string()))
-                            || edge_set.contains(&(target.to_string(), src.clone()))
-                    }) || edge_set.iter().any(|(s, d)| s == target || d == target);
-                    if !valid {
-                        report.claim_errors.push(WikiClaimError {
-                            page_id: page.meta.id.clone(),
-                            claim: format!("calls {target}"),
-                            message: "no matching call edge in graph".into(),
-                        });
-                    }
+                if claim_type == "calls" && !claim_calls_valid(&anchors, target, &edge_set) {
+                    report.claim_errors.push(WikiClaimError {
+                        page_id: page.meta.id.clone(),
+                        claim: format!("calls {target}"),
+                        message: "no direct call edge between anchored symbols and target".into(),
+                    });
                 }
             }
 
@@ -99,9 +94,21 @@ impl WikiLinter {
     }
 }
 
+/// Verifies a `calls TARGET` claim against direct edges involving anchored symbols.
+pub fn claim_calls_valid(
+    anchors: &HashSet<&str>,
+    target: &str,
+    edges: &HashSet<(String, String)>,
+) -> bool {
+    anchors.iter().any(|anchor| {
+        edges.contains(&(anchor.to_string(), target.to_string()))
+            || edges.contains(&(target.to_string(), anchor.to_string()))
+    })
+}
+
 fn count_inbound_links(store: &WikiStore) -> Result<HashMap<String, usize>, CoreError> {
     let mut counts: HashMap<String, usize> = HashMap::new();
-    if let Some(index) = store.load_page("index")? {
+    if let Some(index) = store.load_index()? {
         for link in &index.meta.see_also {
             *counts.entry(link.clone()).or_default() += 1;
         }
@@ -115,4 +122,26 @@ fn count_inbound_links(store: &WikiStore) -> Result<HashMap<String, usize>, Core
         }
     }
     Ok(counts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn claim_valid_only_for_direct_edges() {
+        let anchors: HashSet<&str> = ["a"].into_iter().collect();
+        let mut edges = HashSet::new();
+        edges.insert(("a".into(), "b".into()));
+        assert!(claim_calls_valid(&anchors, "b", &edges));
+        assert!(!claim_calls_valid(&anchors, "c", &edges));
+    }
+
+    #[test]
+    fn claim_accepts_reverse_edge() {
+        let anchors: HashSet<&str> = ["svc"].into_iter().collect();
+        let mut edges = HashSet::new();
+        edges.insert(("caller".into(), "svc".into()));
+        assert!(claim_calls_valid(&anchors, "caller", &edges));
+    }
 }

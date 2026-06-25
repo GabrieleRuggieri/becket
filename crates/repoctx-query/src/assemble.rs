@@ -4,7 +4,9 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use repoctx_core::wiki::{find_page_for_symbol, WikiStore};
+use repoctx_core::wiki::{
+    find_page_for_symbol, sanitize_for_context, wiki_adds_context, WikiStore,
+};
 use repoctx_schema::artifacts::SymbolRecord;
 use repoctx_store::{IndexStore, RepoCtxPaths};
 
@@ -104,6 +106,11 @@ pub fn assemble_context(
     let wiki_store = WikiStore::new(&paths);
     let wiki_page = find_page_for_symbol(&wiki_store, &root.id).ok().flatten();
 
+    let wiki_sanitized = wiki_page
+        .as_ref()
+        .map(|p| sanitize_for_context(&p.body))
+        .filter(|body| wiki_adds_context(body));
+
     let markdown = render_markdown(&MarkdownInput {
         root: &root,
         responsibility: &responsibility,
@@ -114,7 +121,7 @@ pub fn assemble_context(
         id_to_symbol: &id_to_symbol,
         related: &related_components,
         wiki_page_id: wiki_page.as_ref().map(|p| p.meta.id.as_str()),
-        wiki_body: wiki_page.as_ref().map(|p| p.body.as_str()),
+        wiki_body: wiki_sanitized.as_deref(),
         task,
     });
 
@@ -132,7 +139,7 @@ pub fn assemble_context(
         callees: callee_names,
         affected_symbol_ids: affected_ids,
         wiki_page_id: wiki_page.as_ref().map(|p| p.meta.id.clone()),
-        wiki_body: wiki_page.as_ref().map(|p| p.body.clone()),
+        wiki_body: wiki_sanitized,
         markdown,
         task,
         budget_tokens: budget,
@@ -258,13 +265,15 @@ fn render_markdown(input: &MarkdownInput<'_>) -> String {
     md.push('\n');
 
     if let (Some(page_id), Some(body)) = (wiki_page_id, wiki_body) {
-        md.push_str("\n## Wiki\n\n");
-        md.push_str(&format!("_Grounded page: `{page_id}`_\n\n"));
-        md.push_str(body);
-        if !body.ends_with('\n') {
+        if !body.is_empty() {
+            md.push_str("\n## Wiki\n\n");
+            md.push_str(&format!("_Grounded page: `{page_id}`_\n\n"));
+            md.push_str(body);
+            if !body.ends_with('\n') {
+                md.push('\n');
+            }
             md.push('\n');
         }
-        md.push('\n');
     }
 
     if !snippets.is_empty() {

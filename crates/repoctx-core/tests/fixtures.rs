@@ -265,6 +265,80 @@ fn build_flows_payment_compiles_wiki_pages() {
         entries.len() >= 2,
         "expected flow/service/module pages + index"
     );
+
+    let flow_md = fs::read_to_string(wiki_dir.join("flow_payment.md")).expect("flow page");
+    assert!(
+        flow_md.contains("1. **checkout**"),
+        "steps should be 1-based"
+    );
+    assert!(
+        flow_md.contains("**charge_card**"),
+        "edges should use symbol names"
+    );
+    assert!(!flow_md.contains("Awaiting enrichment"));
+}
+
+#[test]
+fn wiki_sync_preserves_enriched_prose() {
+    let work = isolated_fixture("flows-payment");
+    BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("build");
+
+    let paths = repoctx_store::RepoCtxPaths::new(&work.root);
+    let store = repoctx_store::IndexStore::open(&paths.index_db).expect("index");
+    let wiki_store = repoctx_core::WikiStore::new(&paths);
+    let mut page = wiki_store
+        .load_page("flow_payment")
+        .expect("load")
+        .expect("page");
+    page.body = repoctx_core::wiki::replace_prose_slot(
+        &page.body,
+        "Payment flow must never skip card validation.",
+    );
+    wiki_store
+        .write_page(&page.meta, &page.body)
+        .expect("write");
+
+    let compiler = repoctx_core::WikiCompiler::new(paths.clone());
+    compiler
+        .sync_pages(&store, &["wiki_flow_payment".into()])
+        .expect("sync");
+
+    let rebuilt = wiki_store
+        .load_page("flow_payment")
+        .expect("reload")
+        .expect("page");
+    assert!(rebuilt.body.contains("never skip card validation"));
+    assert!(rebuilt.body.contains("1. **checkout**"));
+}
+
+#[test]
+fn context_bundle_omits_wiki_claim_comments() {
+    let work = isolated_fixture("bench-small");
+    BuildPipeline::new(
+        &work.root,
+        BuildOptions {
+            incremental: false,
+            no_embeddings: true,
+        },
+    )
+    .run()
+    .expect("build");
+
+    let engine = QueryEngine::new(&work.root);
+    let ctx = engine
+        .context("main", Some(6000), repoctx_query::ContextTask::Fix)
+        .expect("context");
+
+    assert!(!ctx.markdown.contains("repoctx:claim"));
+    assert!(!ctx.markdown.contains("Awaiting enrichment"));
 }
 
 #[test]

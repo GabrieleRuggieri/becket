@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use repoctx_core::redact_secrets;
+use repoctx_core::wiki::{replace_prose_slot, WikiStore, PROSE_SLOT};
 use repoctx_query::types::{ContextResult, FlowResult, SummarySource};
 use repoctx_schema::artifacts::FlowRecord;
 use repoctx_store::{EnrichmentRecord, IndexStore, RepoCtxPaths};
@@ -16,7 +17,6 @@ const ENTITY_SYMBOL: &str = "symbol";
 const ENTITY_FLOW: &str = "flow";
 const ENTITY_WIKI: &str = "wiki";
 const SOURCE_SAMPLING: &str = "mcp_sampling";
-const PROSE_SLOT: &str = "<!-- repoctx:slot prose -->";
 
 /// Returns true when the connected MCP client can handle `sampling/createMessage`.
 pub fn client_supports_sampling(peer: &Peer<RoleServer>) -> bool {
@@ -128,6 +128,7 @@ pub async fn enrich_wiki_prose(
     if let Some(cached) = load_cached(ENTITY_WIKI, &page_id, &paths.index_db) {
         page.body = replace_prose_slot(&page.body, &cached);
         page.meta.source = repoctx_schema::wiki::WikiPageSource::McpSampling;
+        let _ = WikiStore::new(&paths).write_page(&page.meta, &page.body);
         return page;
     }
 
@@ -138,23 +139,8 @@ pub async fn enrich_wiki_prose(
     cache_enrichment(ENTITY_WIKI, &page_id, &prose, &paths.index_db);
     page.body = replace_prose_slot(&page.body, &prose);
     page.meta.source = repoctx_schema::wiki::WikiPageSource::McpSampling;
+    let _ = WikiStore::new(&paths).write_page(&page.meta, &page.body);
     page
-}
-
-fn replace_prose_slot(body: &str, prose: &str) -> String {
-    if let Some(idx) = body.find(PROSE_SLOT) {
-        let after = body[idx + PROSE_SLOT.len()..]
-            .find("\n## ")
-            .map(|i| idx + PROSE_SLOT.len() + i)
-            .unwrap_or(body.len());
-        let mut out = String::new();
-        out.push_str(&body[..idx + PROSE_SLOT.len()]);
-        out.push('\n');
-        out.push_str(prose);
-        out.push_str(&body[after..]);
-        return out;
-    }
-    format!("{body}\n\n{prose}")
 }
 
 fn build_wiki_prompt(page: &repoctx_schema::wiki::WikiPage) -> String {
