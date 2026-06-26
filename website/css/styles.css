@@ -1,6 +1,5 @@
 /* ===== CSS Variables ===== */
-:root,
-[data-theme="dark"] {
+:root {
   --bg: #08080c;
   --bg-alt: #0e0e14;
   --surface: rgba(255, 255, 255, 0.04);
@@ -21,23 +20,6 @@
   --code-bg: rgba(0, 0, 0, 0.35);
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   --gradient: linear-gradient(135deg, #f97316, #fbbf24);
-}
-
-[data-theme="light"] {
-  --bg: #f8f8fc;
-  --bg-alt: #f0f0f6;
-  --surface: rgba(255, 255, 255, 0.7);
-  --surface-hover: rgba(255, 255, 255, 0.9);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
-  --text: #12121a;
-  --text-muted: #5c5c6e;
-  --text-dim: #8b8b9e;
-  --accent-glow: rgba(249, 115, 22, 0.2);
-  --accent-glow-soft: rgba(251, 191, 36, 0.1);
-  --nav-bg: rgba(248, 248, 252, 0.85);
-  --code-bg: rgba(0, 0, 0, 0.04);
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 /* ===== Reset & Base ===== */
@@ -325,10 +307,6 @@ body.nav-open {
   color: var(--accent);
 }
 
-[data-theme="dark"] .icon-sun { display: block; }
-[data-theme="dark"] .icon-moon { display: none; }
-[data-theme="light"] .icon-sun { display: none; }
-[data-theme="light"] .icon-moon { display: block; }
 
 /* ===== Hero ===== */
 .hero {
@@ -1425,6 +1403,103 @@ td { color: var(--text-muted); }
   margin: 1rem 0 1.5rem 1.25rem;
   color: var(--text-muted);
   line-height: 1.8;
+}
+
+.callout {
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
+  border-left: 3px solid var(--accent);
+}
+
+.callout p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.persona-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.persona-card {
+  padding: 1.25rem;
+}
+
+.persona-card h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.persona-card p {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.persona-card .code-block {
+  margin: 0;
+}
+
+.lang-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.lang-chip {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.faq-item {
+  margin-bottom: 0.75rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.faq-item summary {
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: "+";
+  float: right;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.faq-item[open] summary::after {
+  content: "−";
+}
+
+.faq-item p {
+  padding: 0 1.25rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.example-output pre {
+  font-size: 0.78rem;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.product-workflows {
+  margin: 1.5rem 0 2rem;
+  max-width: 42rem;
 }
 
 @media (max-width: 768px) {

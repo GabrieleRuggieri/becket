@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Becket Documentation — CLI, MCP, Architecture" />
+  <meta name="description" content="Becket Documentation — MCP setup for Cursor and Claude Code, CLI reference, demo walkthrough" />
   <title>Docs — Becket</title>
   <link rel="icon" type="image/svg+xml" href="public/favicon.svg" />
-  <link rel="preload" href="css/styles.css?v=12" as="style" />
-  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <link rel="preload" href="css/styles.css?v=14" as="style" />
+  <link rel="stylesheet" href="css/styles.css?v=14" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
-  <script>try{var t=localStorage.getItem("becket-theme");if(t)document.documentElement.setAttribute("data-theme",t);var l=localStorage.getItem("becket-lang");if(!l){l=(navigator.language||"").startsWith("it")?"it":"en"}document.documentElement.lang=l}catch(e){}</script>
+  <script>try{var l=localStorage.getItem("becket-lang");if(!l){l=(navigator.language||"").startsWith("it")?"it":"en"}document.documentElement.lang=l}catch(e){}</script>
 </head>
 <body>
   <a class="skip-link" href="#main-content" data-i18n="a11y.skip">Skip to content</a>
@@ -30,16 +30,15 @@
       </a>
       <nav class="nav-links docs-nav-links" id="nav-links" aria-label="Documentation">
         <a href="index.html" data-i18n="nav.home">Home</a>
-        <a href="#install" data-i18n="docs.nav.install">Install</a>
-        <a href="#install" class="btn btn-primary nav-cta-mobile" data-i18n="nav.getStarted">Get Started</a>
+        <a href="#quickstart" data-i18n="docs.nav.quickstart">Quick Start</a>
+        <a href="#mcp" data-i18n="docs.nav.mcp">MCP</a>
+        <a href="#cli" data-i18n="docs.nav.cli">CLI</a>
+        <a href="#faq" data-i18n="docs.nav.faq">FAQ</a>
+        <a href="#quickstart" class="btn btn-primary nav-cta-mobile" data-i18n="nav.getStarted">Get Started</a>
       </nav>
       <div class="nav-actions">
         <button class="btn-icon" id="lang-toggle" aria-label="Switch language">EN</button>
-        <button class="btn-icon" id="theme-toggle" aria-label="Toggle theme">
-          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
-        <a href="#install" class="btn btn-primary" data-i18n="nav.getStarted">Get Started</a>
+        <a href="#quickstart" class="btn btn-primary" data-i18n="nav.getStarted">Get Started</a>
       </div>
       <button class="nav-burger" id="nav-burger" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -51,107 +50,194 @@
     <div class="container docs-layout">
       <aside class="docs-sidebar glass-card">
         <nav class="docs-toc">
+          <a href="#quickstart" data-i18n="docs.toc.quickstart">Quick Start</a>
+          <a href="#install" data-i18n="docs.toc.install">Installation</a>
           <a href="#overview" data-i18n="docs.toc.overview">Overview</a>
-          <a href="#layers" data-i18n="docs.toc.layers">Three Layers</a>
+          <a href="#demo" data-i18n="docs.toc.demo">Demo</a>
+          <a href="#audience" data-i18n="docs.toc.audience">Who It's For</a>
+          <a href="#mcp" data-i18n="docs.toc.mcp">MCP Integration</a>
           <a href="#cli" data-i18n="docs.toc.cli">CLI Reference</a>
           <a href="#wiki" data-i18n="docs.toc.wiki">Knowledge Wiki</a>
-          <a href="#mcp" data-i18n="docs.toc.mcp">MCP Integration</a>
+          <a href="#languages" data-i18n="docs.toc.languages">Languages</a>
+          <a href="#layers" data-i18n="docs.toc.layers">Three Layers</a>
+          <a href="#advanced" data-i18n="docs.toc.advanced">Advanced</a>
           <a href="#artifacts" data-i18n="docs.toc.artifacts">Artifacts</a>
+          <a href="#faq" data-i18n="docs.toc.faq">FAQ</a>
           <a href="#principles" data-i18n="docs.toc.principles">Design Principles</a>
           <a href="#architecture" data-i18n="docs.toc.architecture">Architecture</a>
-          <a href="#adoption" data-i18n="docs.toc.adoption">Adoption</a>
-          <a href="#install" data-i18n="docs.toc.install">Installation</a>
         </nav>
       </aside>
 
       <article class="docs-content">
+
+        <!-- Quick Start -->
+        <section id="quickstart" class="doc-section reveal">
+          <span class="status-badge shipped" data-i18n="docs.quickstart.badge">Recommended path</span>
+          <h1 data-i18n="docs.quickstart.title">Quick Start</h1>
+          <p class="lead" data-i18n="docs.quickstart.lead">Becket is built for developers using Cursor or Claude Code. The agent calls MCP tools automatically — you index once, then the agent pulls verified context before every edit.</p>
+
+          <ol class="adoption-steps">
+            <li data-i18n-html="docs.quickstart.s1"></li>
+            <li data-i18n-html="docs.quickstart.s2"></li>
+            <li data-i18n-html="docs.quickstart.s3"></li>
+            <li data-i18n-html="docs.quickstart.s4"></li>
+          </ol>
+
+          <div class="callout glass-card">
+            <p data-i18n-html="docs.quickstart.callout"></p>
+          </div>
+
+          <h3 data-i18n="docs.quickstart.cursorTitle">Cursor — MCP config</h3>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>.cursor/mcp.json</span><button class="copy-btn" data-copy='{"mcpServers":{"becket":{"command":"becket-mcp","env":{"BECKET_ROOT":"${workspaceFolder}"}}}}'>Copy</button></div>
+            <pre><code>{
+  "mcpServers": {
+    "becket": {
+      "command": "becket-mcp",
+      "env": {
+        "BECKET_ROOT": "${workspaceFolder}"
+      }
+    }
+  }
+}</code></pre>
+          </div>
+
+          <h3 data-i18n="docs.quickstart.claudeTitle">Claude Code — MCP config</h3>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>~/.claude/claude_desktop_config.json</span><button class="copy-btn" data-copy='{"mcpServers":{"becket":{"command":"becket-mcp","args":[],"env":{"BECKET_ROOT":"/path/to/your/repo"}}}}'>Copy</button></div>
+            <pre><code>{
+  "mcpServers": {
+    "becket": {
+      "command": "becket-mcp",
+      "env": {
+        "BECKET_ROOT": "/path/to/your/repo"
+      }
+    }
+  }
+}</code></pre>
+          </div>
+          <p class="muted" data-i18n="docs.quickstart.claudeNote">Replace the path with your project root. Claude Code reads the same MCP server as Cursor.</p>
+        </section>
+
+        <!-- Installation -->
+        <section id="install" class="doc-section reveal">
+          <h2 data-i18n="docs.install.title">Installation</h2>
+          <p data-i18n="docs.install.desc">Becket is free and open source (Apache-2.0). No account, no subscription, no telemetry. You need Node.js/npm for the install wrappers — Rust is only required if you build from source.</p>
+
+          <div class="persona-grid">
+            <div class="persona-card glass-card">
+              <h3 data-i18n="docs.install.path1.title">Cursor / Claude Code</h3>
+              <p data-i18n="docs.install.path1.desc">Install both packages globally so MCP finds them on PATH.</p>
+              <div class="code-block glass-card">
+                <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npm install -g becket becket-mcp">Copy</button></div>
+                <pre><code>npm install -g becket becket-mcp</code></pre>
+              </div>
+            </div>
+            <div class="persona-card glass-card">
+              <h3 data-i18n="docs.install.path2.title">Try without global install</h3>
+              <p data-i18n="docs.install.path2.desc">Downloads the native binary on first run. Good for a one-off index or the demo folder.</p>
+              <div class="code-block glass-card">
+                <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npx becket build">Copy</button></div>
+                <pre><code>npx becket build</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="install-note glass-card">
+            <p data-i18n-html="docs.install.note"></p>
+          </div>
+        </section>
+
+        <!-- Overview -->
         <section id="overview" class="doc-section reveal">
-          <h1 data-i18n="docs.overview.title">Documentation</h1>
+          <h2 data-i18n="docs.overview.title">Overview</h2>
           <p class="lead" data-i18n="docs.overview.lead">Becket is a local intelligence layer that combines a verified code graph, a graph-grounded knowledge wiki, and context assembly that returns real source snippets for AI agents and developers.</p>
+          <p data-i18n="docs.overview.mcpFirst">The primary workflow is MCP inside your IDE: the agent calls <code>get_context</code> before modifying code. The CLI is for indexing, inspection, CI gates, and scripts — it exposes the same queries but does not replace an AI coding agent.</p>
         </section>
 
-        <section id="layers" class="doc-section reveal">
-          <h2 data-i18n="docs.layers.title">Three Knowledge Layers</h2>
-          <p data-i18n="docs.layers.desc">Becket indexes your codebase locally and exposes three coordinated layers: a deterministic graph (ground truth), a symbol-anchored wiki (intent and gotchas), and context assembly (real snippets within a token budget).</p>
-          <div class="arch-stack">
-            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l3">Context Assembly</span><span data-i18n="docs.layers.l3d">Code snippets + wiki + impact, token-budgeted</span></div>
-            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l2">Grounded Repo Wiki</span><span data-i18n="docs.layers.l2d">Markdown pages anchored to symbol IDs, MCP-authored, lint-checked</span></div>
-            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l1">Deterministic Core</span><span data-i18n="docs.layers.l1d">Symbols, graph, flows, impact — from tree-sitter, no LLM</span></div>
+        <!-- Demo -->
+        <section id="demo" class="doc-section reveal">
+          <h2 data-i18n="docs.demo.title">Demo walkthrough</h2>
+          <p data-i18n="docs.demo.desc">The repository includes a <code>demo/</code> folder — a mini shop with payment, order, and shipping flows. Use it to try Becket without touching your own codebase.</p>
+
+          <div class="code-block glass-card">
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="cd demo&#10;npx becket build&#10;becket context capture --budget 6000 --task fix">Copy</button></div>
+            <pre><code>cd demo
+npx becket build
+becket context capture --budget 6000 --task fix</code></pre>
+          </div>
+
+          <p data-i18n="docs.demo.outputDesc">Example output (truncated) — a markdown bundle with wiki, real snippets, and impact:</p>
+          <div class="code-block glass-card example-output">
+            <pre><code># Context: capture
+
+**Task:** Fix
+
+## Symbol
+capture (Function) — src/services/payments.rs
+
+## Wiki
+_Grounded page: wiki_flow_services_
+Execution path: run_billing → invoice → capture → place → …
+
+## Code
+
+```rust
+pub fn capture() {
+    super::orders::place();
+}
+```
+
+### invoice (`src/services/billing.rs`)
+```rust
+pub fn invoice() {
+    super::payments::capture();
+}
+```
+…</code></pre>
+          </div>
+
+          <p data-i18n-html="docs.demo.readme">Full commands: see <a href="https://github.com/GabrieleRuggieri/becket/tree/main/demo">demo/README.md</a> in the repository.</p>
+        </section>
+
+        <!-- Audience -->
+        <section id="audience" class="doc-section reveal">
+          <h2 data-i18n="docs.audience.title">Who it's for</h2>
+          <p data-i18n="docs.audience.desc">Becket targets developers and teams working on real codebases with AI coding agents.</p>
+          <div class="table-wrap glass-card">
+            <table>
+              <thead>
+                <tr>
+                  <th data-i18n="docs.audience.th.role">You are…</th>
+                  <th data-i18n="docs.audience.th.do">Do this</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-i18n="docs.audience.r1">Cursor / Claude Code user</td>
+                  <td data-i18n-html="docs.audience.d1"><code>becket build</code> once → MCP config → agent calls <code>get_context</code></td>
+                </tr>
+                <tr>
+                  <td data-i18n="docs.audience.r2">Developer (CLI only)</td>
+                  <td data-i18n-html="docs.audience.d2"><code>becket build</code> → <code>impact</code> / <code>context</code> / <code>flow</code> before refactors</td>
+                </tr>
+                <tr>
+                  <td data-i18n="docs.audience.r3">Team lead / CI</td>
+                  <td data-i18n-html="docs.audience.d3"><code>becket build</code> in CI → <code>wiki lint --strict</code> to gate stale docs</td>
+                </tr>
+                <tr>
+                  <td data-i18n="docs.audience.r4">Monorepo / polyrepo</td>
+                  <td data-i18n-html="docs.audience.d4"><code>becket workspace build</code> for cross-service linking</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
-        <section id="cli" class="doc-section reveal">
-          <h2 data-i18n="docs.cli.title">CLI Reference</h2>
-
-          <h3 data-i18n="docs.cli.build.title">Initialize analysis</h3>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket build">Copy</button></div>
-            <pre><code>becket build</code></pre>
-          </div>
-          <p data-i18n="docs.cli.build.desc">Generates versioned JSON artifacts under <code>.becket/</code>:</p>
-          <div class="code-block glass-card">
-            <pre><code>.becket/
-  architecture.json
-  symbols.json
-  flows.json
-  dependencies.json
-  entrypoints.json
-  wiki/
-    index.md
-    *.md</code></pre>
-          </div>
-
-          <h3 data-i18n="docs.cli.wiki.title">Knowledge wiki</h3>
-          <div class="code-block glass-card">
-            <pre><code>becket wiki sync
-becket wiki lint
-becket wiki show OrderService</code></pre>
-          </div>
-          <p data-i18n="docs.cli.wiki.desc">Sync creates/updates grounded markdown pages (lazy, via MCP host). Lint flags stale or contradictory pages against the live graph.</p>
-
-          <h3 data-i18n="docs.cli.impact.title">Query impact</h3>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket impact UserService">Copy</button></div>
-            <pre><code>becket impact UserService</code></pre>
-          </div>
-          <p data-i18n="docs.cli.impact.desc">Returns affected modules, downstream dependencies, related tests, and potential risk zones.</p>
-
-          <h3 data-i18n="docs.cli.flow.title">Understand a flow</h3>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket flow payment">Copy</button></div>
-            <pre><code>becket flow payment</code></pre>
-          </div>
-          <p data-i18n="docs.cli.flow.desc">Shows end-to-end execution path, service interactions, and external systems.</p>
-
-          <h3 data-i18n="docs.cli.context.title">Context bundle (code included)</h3>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket context PaymentService --format md --budget 6000 --task fix">Copy</button></div>
-            <pre><code>becket context PaymentService --format md --budget 6000 --task fix</code></pre>
-          </div>
-          <p data-i18n="docs.cli.context.desc">Returns wiki page + real code snippets + impact set, packed within the token budget. Enough source to fix a bug — not the whole repo.</p>
-
-          <h3 data-i18n="docs.cli.domain.title">Domain refinement (optional)</h3>
-          <div class="code-block glass-card">
-            <pre><code>becket domain rename &lt;auto-id&gt; payment
-becket domain add payment src/billing/** PaymentService</code></pre>
-          </div>
-          <p data-i18n="docs.cli.domain.desc">Zero-config by default. Refine auto-discovered domains via CLI — no config file required.</p>
-        </section>
-
-        <section id="wiki" class="doc-section reveal">
-          <h2 data-i18n="docs.wiki.title">Grounded Repo Wiki</h2>
-          <p data-i18n="docs.wiki.desc">Markdown pages for modules, services, and flows — each anchored to real symbol IDs from the deterministic graph. Structure is compiled from the graph; optional prose (intent & gotchas) via MCP. Stale claims are flagged automatically.</p>
-          <ul class="check-list docs-check">
-            <li data-i18n="docs.wiki.li1">Pages authored lazily via MCP sampling (host model, no bundled LLM)</li>
-            <li data-i18n="docs.wiki.li2">graph_fingerprint detects when anchored code changed</li>
-            <li data-i18n="docs.wiki.li3">wiki lint compares page claims to live edges</li>
-            <li data-i18n="docs.wiki.li4">index.md routes agents to relevant pages first</li>
-          </ul>
-        </section>
-
+        <!-- MCP -->
         <section id="mcp" class="doc-section reveal">
           <h2 data-i18n="docs.mcp.title">MCP Integration</h2>
-          <p data-i18n="docs.mcp.desc">Becket exposes an MCP server over stdio for seamless agent integration.</p>
+          <p data-i18n="docs.mcp.desc">Becket exposes an MCP server over stdio. This is how Cursor and Claude Code agents access verified context automatically — no manual copy-paste.</p>
           <div class="code-block glass-card">
             <pre><code>becket-mcp</code></pre>
           </div>
@@ -161,20 +247,181 @@ becket domain add payment src/billing/** PaymentService</code></pre>
                 <tr>
                   <th data-i18n="docs.mcp.th.tool">Tool</th>
                   <th data-i18n="docs.mcp.th.desc">Description</th>
+                  <th data-i18n="docs.mcp.th.when">When to use</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td><code>get_context</code></td><td data-i18n="docs.mcp.t1">Code snippets + wiki page + impact, packed to budget</td></tr>
-                <tr><td><code>get_wiki</code></td><td data-i18n="docs.mcp.t5">Grounded markdown page or index router</td></tr>
-                <tr><td><code>get_impact</code></td><td data-i18n="docs.mcp.t2">Change impact analysis</td></tr>
-                <tr><td><code>get_flow</code></td><td data-i18n="docs.mcp.t3">Business flow reconstruction</td></tr>
-                <tr><td><code>get_dependencies</code></td><td data-i18n="docs.mcp.t4">Direct and transitive dependencies</td></tr>
+                <tr>
+                  <td><code>get_context</code></td>
+                  <td data-i18n="docs.mcp.t1">Wiki + code snippets + impact, packed to budget</td>
+                  <td data-i18n="docs.mcp.t1w">Before fixing or refactoring a symbol</td>
+                </tr>
+                <tr>
+                  <td><code>get_wiki</code></td>
+                  <td data-i18n="docs.mcp.t5">Grounded markdown page or index router</td>
+                  <td data-i18n="docs.mcp.t5w">Onboarding; <code>enrich=true</code> fills intent/gotchas</td>
+                </tr>
+                <tr>
+                  <td><code>get_impact</code></td>
+                  <td data-i18n="docs.mcp.t2">Change impact analysis</td>
+                  <td data-i18n="docs.mcp.t2w">Before renaming or deleting a symbol</td>
+                </tr>
+                <tr>
+                  <td><code>get_flow</code></td>
+                  <td data-i18n="docs.mcp.t3">Business flow reconstruction</td>
+                  <td data-i18n="docs.mcp.t3w">Understanding end-to-end paths</td>
+                </tr>
+                <tr>
+                  <td><code>get_dependencies</code></td>
+                  <td data-i18n="docs.mcp.t4">Direct and transitive dependencies</td>
+                  <td data-i18n="docs.mcp.t4w">Dependency exploration</td>
+                </tr>
               </tbody>
             </table>
           </div>
-          <p data-i18n="docs.mcp.sampling">Wiki authoring and text enrichment use MCP sampling — the host agent's model handles prose. Becket ships no LLM, holds no API keys, and never generates code — only slices real source.</p>
+          <p data-i18n="docs.mcp.sampling">Wiki prose and summaries use MCP sampling — your host agent's model writes intent and gotchas. Becket ships no LLM, holds no API keys, and never generates code — only slices real source from disk.</p>
+
+          <h3 data-i18n="docs.mcp.howTitle">How does the agent call get_context?</h3>
+          <p data-i18n="docs.mcp.howDesc">Becket does not hook into every keystroke. MCP exposes tools to Cursor or Claude Code; the agent decides when to call them — same as any other MCP tool. Tool names and descriptions tell the model what is available; it invokes get_context when your task needs codebase context (fix a bug, refactor a symbol, etc.).</p>
+          <p data-i18n="docs.mcp.howTip">For reliable use, add a project rule or ask explicitly — e.g. “use Becket get_context on PaymentService before editing”. Without that, the agent may skip the tool and guess from open files alone.</p>
+
+          <h3 data-i18n="docs.mcp.rulesTitle">Cursor — project rule (recommended)</h3>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>.cursor/rules/becket.mdc</span><button class="copy-btn" data-copy="Before modifying code, call the Becket MCP tool get_context on the relevant symbol (function, class, or module). Use get_impact before renames or deletions. Run becket build if .becket/ is missing.">Copy</button></div>
+            <pre><code>Before modifying code, call the Becket MCP tool get_context
+on the relevant symbol (function, class, or module).
+Use get_impact before renames or deletions.
+Run becket build if .becket/ is missing.</code></pre>
+          </div>
+          <p class="muted" data-i18n="docs.mcp.rulesNote">Claude Code: add the same instruction in CLAUDE.md or your project system prompt.</p>
+
+          <div class="callout glass-card">
+            <p data-i18n-html="docs.mcp.cliNote"><strong>CLI vs MCP:</strong> <code>becket context</code> returns the same bundle as <code>get_context</code>. MCP lets the agent fetch it inside the chat; the CLI is for you in the terminal. Neither runs by itself — MCP needs an agent turn; CLI needs you to run the command.</p>
+          </div>
         </section>
 
+        <!-- CLI -->
+        <section id="cli" class="doc-section reveal">
+          <h2 data-i18n="docs.cli.title">CLI Reference</h2>
+          <p data-i18n="docs.cli.intro">The CLI indexes your repo and answers queries. Run it from the repository root (or pass <code>--repo</code>).</p>
+
+          <h3 data-i18n="docs.cli.build.title">Index the repository</h3>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket build">Copy</button></div>
+            <pre><code>becket build
+becket build --watch    # incremental rebuild on file changes</code></pre>
+          </div>
+          <p data-i18n="docs.cli.build.desc">Generates versioned JSON artifacts and grounded wiki pages under <code>.becket/</code>. No LLM required.</p>
+
+          <h3 data-i18n="docs.cli.context.title">Context bundle</h3>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket context PaymentService --format md --budget 6000 --task fix">Copy</button></div>
+            <pre><code>becket context capture --budget 6000 --task fix
+becket context capture --task refactor
+becket context capture --task onboard --json</code></pre>
+          </div>
+          <p data-i18n="docs.cli.context.desc">Task modes: <code>fix</code> (default, more snippets), <code>refactor</code> (wider impact), <code>onboard</code> (overview, fewer snippets).</p>
+
+          <h3 data-i18n="docs.cli.impact.title">Query impact</h3>
+          <div class="code-block glass-card">
+            <pre><code>becket impact capture --depth 3</code></pre>
+          </div>
+          <p data-i18n="docs.cli.impact.desc">Returns affected modules, downstream symbols, related tests, and risk zones.</p>
+
+          <h3 data-i18n="docs.cli.flow.title">Understand a flow</h3>
+          <div class="code-block glass-card">
+            <pre><code>becket flow services</code></pre>
+          </div>
+          <p data-i18n="docs.cli.flow.desc">Shows end-to-end execution path and service interactions.</p>
+
+          <h3 data-i18n="docs.cli.wiki.title">Knowledge wiki</h3>
+          <div class="code-block glass-card">
+            <pre><code>becket wiki sync
+becket wiki lint
+becket wiki lint --strict
+becket wiki show services</code></pre>
+          </div>
+          <p data-i18n="docs.cli.wiki.desc">Sync recompiles wiki structure from the graph. Lint checks pages against live call edges — see Wiki section below.</p>
+
+          <h3 data-i18n="docs.cli.domain.title">Domain refinement (optional)</h3>
+          <div class="code-block glass-card">
+            <pre><code>becket domain rename &lt;auto-id&gt; payment
+becket domain add payment src/billing/** capture</code></pre>
+          </div>
+          <p data-i18n="docs.cli.domain.desc">Zero-config by default. Refine auto-discovered domains via CLI.</p>
+        </section>
+
+        <!-- Wiki -->
+        <section id="wiki" class="doc-section reveal">
+          <h2 data-i18n="docs.wiki.title">Grounded Repo Wiki</h2>
+          <p data-i18n="docs.wiki.desc">Markdown pages for modules, services, and flows — each anchored to real symbol IDs from the deterministic graph. Structure is compiled from the graph; optional prose (intent and gotchas) via MCP sampling.</p>
+
+          <h3 data-i18n-html="docs.wiki.lintTitle">What does <code>wiki lint</code> do?</h3>
+          <p data-i18n="docs.wiki.lintDesc">Wiki lint compares every wiki page against the live call graph — the graph is always ground truth. It reports:</p>
+          <ul class="check-list docs-check">
+            <li data-i18n-html="docs.wiki.liStale"></li>
+            <li data-i18n-html="docs.wiki.liClaims"></li>
+            <li data-i18n-html="docs.wiki.liLinks"></li>
+            <li data-i18n-html="docs.wiki.liOrphans"></li>
+          </ul>
+          <p data-i18n="docs.wiki.lintCi"><code>wiki lint --strict</code> in CI is an optional edge case for teams that version wiki pages in git. For the usual workflow — local <code>.becket/</code>, agent via MCP, no commit — you do not need wiki lint.</p>
+
+          <ul class="check-list docs-check">
+            <li data-i18n="docs.wiki.li1">Pages authored lazily via MCP sampling (host model, no bundled LLM)</li>
+            <li data-i18n="docs.wiki.li2">MCP <code>get_wiki</code> with <code>enrich=true</code> fills intent/gotchas and persists to disk</li>
+            <li data-i18n="docs.wiki.li3"><code>index.md</code> routes agents to relevant pages first</li>
+          </ul>
+        </section>
+
+        <!-- Languages -->
+        <section id="languages" class="doc-section reveal">
+          <h2 data-i18n="docs.languages.title">Supported languages</h2>
+          <p data-i18n="docs.languages.desc">Becket parses source with tree-sitter. Built-in support today:</p>
+          <div class="lang-grid">
+            <span class="lang-chip glass-card">Rust</span>
+            <span class="lang-chip glass-card">Python</span>
+            <span class="lang-chip glass-card">TypeScript / JavaScript</span>
+            <span class="lang-chip glass-card">Go</span>
+            <span class="lang-chip glass-card">Java</span>
+          </div>
+          <p class="muted" data-i18n="docs.languages.note">Other extensions can map to a built-in grammar via <code>becket.languages.toml</code> at the repo root. See CONTRIBUTING.md for adding new languages.</p>
+        </section>
+
+        <!-- Layers -->
+        <section id="layers" class="doc-section reveal">
+          <h2 data-i18n="docs.layers.title">Three Knowledge Layers</h2>
+          <p data-i18n="docs.layers.desc">Becket indexes your codebase locally and exposes three coordinated layers.</p>
+          <div class="arch-stack">
+            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l3">Context Assembly</span><span data-i18n="docs.layers.l3d">Code snippets + wiki + impact, token-budgeted</span></div>
+            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l2">Grounded Repo Wiki</span><span data-i18n="docs.layers.l2d">Markdown pages anchored to symbol IDs, MCP-authored, lint-checked</span></div>
+            <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.layers.l1">Deterministic Core</span><span data-i18n="docs.layers.l1d">Symbols, graph, flows, impact — from tree-sitter, no LLM</span></div>
+          </div>
+        </section>
+
+        <!-- Advanced -->
+        <section id="advanced" class="doc-section reveal">
+          <h2 data-i18n="docs.advanced.title">Advanced</h2>
+
+          <h3 data-i18n="docs.advanced.watch.title">Incremental rebuild</h3>
+          <div class="code-block glass-card">
+            <pre><code>becket build --watch</code></pre>
+          </div>
+          <p data-i18n="docs.advanced.watch.desc">Re-parses changed files and auto-syncs stale wiki structure. Run in a terminal while you code.</p>
+
+          <h3 data-i18n="docs.advanced.workspace.title">Multi-repo workspaces</h3>
+          <div class="code-block glass-card">
+            <pre><code>becket workspace build</code></pre>
+          </div>
+          <p data-i18n="docs.advanced.workspace.desc">Links repositories via HTTP, gRPC, or message queues. Requires a <code>becket.workspace.toml</code> manifest.</p>
+
+          <h3 data-i18n-html="docs.advanced.git.title">Keep <code>.becket/</code> local</h3>
+          <p data-i18n="docs.advanced.git.desc">Add <code>.becket/</code> to <code>.gitignore</code>. It is a local cache rebuilt by <code>becket build</code> — not source of truth for the team. The wiki inside is scaffolding for context assembly, not documentation to publish. Re-index after pulls or large refactors; use <code>becket build --watch</code> while coding if you want it always fresh.</p>
+
+          <h3 data-i18n="docs.advanced.platform.title">Platform support</h3>
+          <p data-i18n="docs.advanced.platform.desc">macOS and Linux are tier-1. Windows binaries ship via GitHub Releases but are tier-2 — report issues on GitHub if something breaks.</p>
+        </section>
+
+        <!-- Artifacts -->
         <section id="artifacts" class="doc-section reveal">
           <h2 data-i18n="docs.artifacts.title">Output Artifacts</h2>
           <p data-i18n="docs.artifacts.desc">All outputs are JSON-compatible, schema-versioned, and machine-readable.</p>
@@ -199,6 +446,45 @@ becket domain add payment src/billing/** PaymentService</code></pre>
           </div>
         </section>
 
+        <!-- FAQ -->
+        <section id="faq" class="doc-section reveal">
+          <h2 data-i18n="docs.faq.title">FAQ &amp; Troubleshooting</h2>
+
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q1">Do I need Rust installed?</summary>
+            <p data-i18n="docs.faq.a1">No. <code>npx becket build</code> and <code>npm install -g becket</code> download prebuilt binaries. Rust is only needed to compile from source.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q2">MCP tools return "index missing"</summary>
+            <p data-i18n="docs.faq.a2">Run <code>becket build</code> in the repository root first. MCP reads from <code>.becket/</code> — without a build, there is nothing to query.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q3"><code>becket-mcp</code> command not found</summary>
+            <p data-i18n="docs.faq.a3">Install globally: <code>npm install -g becket-mcp</code>. Ensure your npm global bin directory is on PATH. Restart Cursor/Claude Code after installing.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q4">Can I use Becket without Cursor or Claude Code?</summary>
+            <p data-i18n="docs.faq.a4">Yes — the CLI provides <code>context</code>, <code>impact</code>, and <code>flow</code> for terminal workflows. But Becket shines when an AI agent calls MCP tools automatically; the CLI alone does not edit code or run an LLM.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q5">Does Becket send my code to the cloud?</summary>
+            <p data-i18n="docs.faq.a5">No. All analysis runs locally. Optional wiki prose enrichment uses your MCP host's model (Cursor/Claude) — Becket itself holds no API keys and sends no telemetry.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q6">What symbol name should I use?</summary>
+            <p data-i18n="docs.faq.a6">Use a function, class, or module name visible in your source — e.g. <code>capture</code>, <code>PaymentService</code>, or a fully qualified name. Run <code>becket build</code> first; symbols come from the indexed graph.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q7">Does get_context run automatically on every edit?</summary>
+            <p data-i18n="docs.faq.a7">No. Cursor and Claude Code expose Becket as MCP tools; the agent calls them when it decides they are needed (or when your rules/prompt tell it to). Add a project rule or ask explicitly for best results. Becket is not a background daemon inside the IDE.</p>
+          </details>
+          <details class="faq-item glass-card">
+            <summary data-i18n="docs.faq.q8">Should I commit .becket/ or .becket/wiki/?</summary>
+            <p data-i18n="docs.faq.a8">No, for the typical workflow. Keep <code>.becket/</code> in <code>.gitignore</code> and run <code>becket build</code> locally (or <code>--watch</code>). Committing wiki pages is only for niche teams that want shared prose in git — not required to save tokens or speed up your agent.</p>
+          </details>
+        </section>
+
+        <!-- Principles -->
         <section id="principles" class="doc-section reveal">
           <h2 data-i18n="docs.principles.title">Design Principles</h2>
           <div class="principles-list">
@@ -220,11 +506,12 @@ becket domain add payment src/billing/** PaymentService</code></pre>
             </div>
             <div class="principle glass-card">
               <h3 data-i18n="docs.principles.p5.title">Graph-Grounded Wiki</h3>
-              <p data-i18n="docs.principles.p5.desc">Wiki pages anchor to symbol IDs and are lint-checked against the live graph. The graph is always ground truth.</p>
+              <p data-i18n="docs.principles.p5.desc">Wiki pages anchor to symbol IDs and are lint-checked against the live graph.</p>
             </div>
           </div>
         </section>
 
+        <!-- Architecture -->
         <section id="architecture" class="doc-section reveal">
           <h2 data-i18n="docs.arch.title">Architecture</h2>
           <p data-i18n="docs.arch.desc">Rust-first deterministic core, graph-grounded wiki, context assembly, SQLite index, MCP server. Multi-repo workspaces and cross-service linking.</p>
@@ -239,52 +526,6 @@ becket domain add payment src/billing/** PaymentService</code></pre>
           <p class="muted" data-i18n-html="docs.arch.note">Full architecture: <a href="https://github.com/GabrieleRuggieri/becket/blob/main/ARCHITECTURE.md">ARCHITECTURE.md</a> in the repository.</p>
         </section>
 
-        <section id="adoption" class="doc-section reveal">
-          <h2 data-i18n="docs.adoption.title">Quick start</h2>
-          <p data-i18n="docs.adoption.desc">Three steps to wire Becket into your agent workflow.</p>
-          <ol class="adoption-steps">
-            <li data-i18n-html="docs.adoption.s1"></li>
-            <li data-i18n-html="docs.adoption.s2"></li>
-            <li data-i18n-html="docs.adoption.s3"></li>
-          </ol>
-          <h3 data-i18n="docs.adoption.mcpTitle">Cursor MCP config</h3>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>.cursor/mcp.json</span><button class="copy-btn" data-copy='{"mcpServers":{"becket":{"command":"becket-mcp","env":{"BECKET_ROOT":"${workspaceFolder}"}}}}'>Copy</button></div>
-            <pre><code>{
-  "mcpServers": {
-    "becket": {
-      "command": "becket-mcp",
-      "env": {
-        "BECKET_ROOT": "${workspaceFolder}"
-      }
-    }
-  }
-}</code></pre>
-          </div>
-        </section>
-
-        <section id="install" class="doc-section reveal">
-          <h2 data-i18n="docs.install.title">Installation</h2>
-          <p data-i18n="docs.install.desc">Becket is 100% free and open source (Apache-2.0). No account, no subscription, no telemetry.</p>
-
-          <h3 data-i18n="docs.install.cli">Try it now (CLI)</h3>
-          <p class="doc-lead" data-i18n="docs.install.cliDesc">Index any repository — no global install required.</p>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npx becket build">Copy</button></div>
-            <pre><code>npx becket build</code></pre>
-          </div>
-
-          <h3 data-i18n="docs.install.mcp">AI agents (MCP)</h3>
-          <p class="doc-lead" data-i18n="docs.install.mcpDesc">For Cursor, Claude Code, or any MCP host — install the server globally so it stays on PATH.</p>
-          <div class="code-block glass-card">
-            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="npm install -g becket-mcp">Copy</button></div>
-            <pre><code>npm install -g becket-mcp</code></pre>
-          </div>
-
-          <div class="install-note glass-card">
-            <p data-i18n-html="docs.install.note">Run <code>npx becket build</code> once per repo before using MCP. <a href="#adoption">Quick start</a> has the Cursor config.</p>
-          </div>
-        </section>
       </article>
     </div>
   </main>
@@ -303,7 +544,7 @@ becket domain add payment src/billing/** PaymentService</code></pre>
     </div>
   </footer>
 
-  <script src="js/i18n.js?v=13" defer></script>
+  <script src="js/i18n.js?v=16" defer></script>
   <script src="js/main.js" defer></script>
 </body>
 </html>

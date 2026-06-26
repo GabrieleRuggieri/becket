@@ -43,16 +43,13 @@ These work **now**. No bundled LLM — optional prose enrichment uses your MCP h
 ### Quick start (3 steps)
 
 ```bash
-# 1. Install (downloads prebuilt binary from GitHub Releases)
-npx becket build
-# or global: npm install -g becket becket-mcp
+# Try the demo first (mini shop codebase in the repo)
+cd demo && npx becket build
 
-# 2. Index your repo
-cd your-project && becket build
+# Or index your own project
+cd your-project && npx becket build
 
-# 3. Get agent-ready context before you edit
-becket context PaymentService --budget 6000 --task fix
-becket wiki lint --strict   # optional CI gate
+# MCP: npm install -g becket becket-mcp — see website/docs.html#quickstart
 ```
 
 ### Cursor / Claude Code (MCP)

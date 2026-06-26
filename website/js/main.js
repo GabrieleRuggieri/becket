@@ -1,20 +1,3 @@
-/* ===== Theme Toggle ===== */
-function initTheme() {
-  const saved = localStorage.getItem("becket-theme") || "dark";
-  document.documentElement.setAttribute("data-theme", saved);
-
-  const btn = document.getElementById("theme-toggle");
-  if (!btn) return;
-
-  btn.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("becket-theme", next);
-    document.dispatchEvent(new CustomEvent("themechange"));
-  });
-}
-
 /* ===== Particle Network (optimized) ===== */
 function initParticles() {
   const canvas = document.getElementById("particles");
@@ -38,9 +21,8 @@ function initParticles() {
   const connectionDistSq = 140 * 140;
 
   function cacheColors() {
-    const light = document.documentElement.getAttribute("data-theme") === "light";
-    dotColor = light ? "rgba(249, 115, 22, 0.25)" : "rgba(249, 115, 22, 0.4)";
-    lineColor = light ? "rgba(249, 115, 22, 0.12)" : "rgba(249, 115, 22, 0.12)";
+    dotColor = "rgba(249, 115, 22, 0.4)";
+    lineColor = "rgba(249, 115, 22, 0.12)";
   }
 
   function resize() {
@@ -132,8 +114,6 @@ function initParticles() {
   document.addEventListener("visibilitychange", () => {
     document.hidden ? stop() : start();
   });
-
-  document.addEventListener("themechange", cacheColors);
 
   let resizeTimer;
   window.addEventListener(
@@ -405,7 +385,6 @@ function initSmoothAnchors() {
 
 /* ===== Init ===== */
 document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
   initParticles();
   initTyping();
   initReveal();
