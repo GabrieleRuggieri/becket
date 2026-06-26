@@ -61,6 +61,10 @@ fn percentile_ms(samples: &mut [Duration], pct: f64) -> Duration {
 }
 
 #[test]
+#[cfg_attr(
+    windows,
+    ignore = "latency budget guards target tier-1 platforms (see docs/windows.md)"
+)]
 fn incremental_rebuild_stays_within_budget() {
     let work = isolated_fixture("bench-small");
     BuildPipeline::new(
@@ -97,6 +101,10 @@ fn incremental_rebuild_stays_within_budget() {
 }
 
 #[test]
+#[cfg_attr(
+    windows,
+    ignore = "latency budget guards target tier-1 platforms (see docs/windows.md)"
+)]
 fn warm_queries_p95_stays_within_budget() {
     let work = isolated_fixture("bench-small");
     BuildPipeline::new(

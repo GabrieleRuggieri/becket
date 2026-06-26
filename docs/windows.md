@@ -7,7 +7,8 @@ Becket treats **Windows** as a **tier-2** platform: binaries are built and teste
 
 - **Tier-1** (`.github/workflows/ci.yml` → `tier1`): `ubuntu-latest`, `macos-latest` — must pass.
 - **Tier-2** (`windows-tier2`): `windows-latest` with `continue-on-error: true` — failures are
-  triaged asynchronously and do not block merges.
+  triaged asynchronously and do not block merges. Latency budget tests (`bench_budget`) are
+  skipped on Windows; they run on tier-1 only.
 
 Release artifacts for `x86_64-pc-windows-msvc` are still produced via `cargo-dist` on tagged
 releases.
