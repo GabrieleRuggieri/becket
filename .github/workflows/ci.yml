@@ -37,7 +37,7 @@ jobs:
         run: cargo test --all
 
       - name: Latency budget guards
-        run: cargo test -p becket-core --test bench_budget
+        run: cargo test -p becket-core --test bench_budget -- --ignored
 
       - name: Validate JSON Schema contract
         run: cargo test -p becket-schema --test schema_validation
