@@ -1,0 +1,2 @@
+# JSON schemas are compared byte-for-byte against generated output; keep LF on all platforms.
+schemas/*.schema.json text eol=lf

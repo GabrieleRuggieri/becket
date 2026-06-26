@@ -9,6 +9,11 @@ fn schemas_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../schemas")
 }
 
+/// Normalize CRLF to LF so schema comparison is platform-independent.
+fn normalize_newlines(s: &str) -> String {
+    s.replace("\r\n", "\n")
+}
+
 #[test]
 fn committed_schemas_match_generated() {
     for name in ARTIFACT_NAMES {
@@ -16,8 +21,8 @@ fn committed_schemas_match_generated() {
         let committed = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
         let generated = pretty_schema_for(name).expect("generate schema");
         assert_eq!(
-            committed.trim(),
-            generated.trim(),
+            normalize_newlines(committed.trim()),
+            normalize_newlines(generated.trim()),
             "schema drift for {name}: run `cargo test -p becket-schema write_schemas -- --ignored --nocapture`"
         );
     }
