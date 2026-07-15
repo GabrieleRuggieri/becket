@@ -64,7 +64,7 @@
 | P1-22 | Embed | **Embedder id guard** — skip semantic search su mismatch | ✅ |
 | P1-23 | DX | **`becket report`** — `metrics.json` + dashboard HTML locale | ✅ |
 | P1-24 | DX | **`becket bench --last N`** — benchmark retrieval vs git history | ✅ |
-| P1-25 | Release | Tag release con graph quality + verificabilità | Da taggare |
+| P1-25 | Release | Tag release con graph quality + verificabilità | ✅ v0.3.0 |
 
 ## P1 — Architettura v1 (completato)
 
@@ -92,7 +92,7 @@
 
 ## Prossimo consigliato (ordine adozione)
 
-1. **P1-25** — tag release graph quality + verificabilità + release notes
+1. **P1-25** — ✅ tag **v0.3.0** (graph quality + verificabilità)
 2. **P1-15** — tag v0.2.0 + release notes Knowledge Layer (se non già fatto)
 3. **P2-5 / P2-6** — wiki router ibrido e semantic lint (scala)
 4. **SCIP/LSP deep mode** — popolare `type_resolved` senza cambiare schema (futuro)

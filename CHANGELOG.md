@@ -4,6 +4,8 @@ All notable changes to Becket are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-15
+
 ### Added
 
 - **Import-aware call resolution** — full per-language import extraction (Rust `use` lists/aliases, Python `from … import … as`, JS/TS named/default/namespace imports, Go import blocks, Java imports) with module-path → file resolution; calls resolve through the importing file's import table before falling back to name matching
@@ -102,6 +104,7 @@ All notable changes to Becket are documented here. The format follows [Keep a Ch
 - Local SQLite index and versioned JSON artifacts under `.becket/`
 - tree-sitter parsing for Rust, TypeScript/JavaScript, Python, Go, Java
 
+[0.3.0]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.3.0
 [0.2.3]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.2.3
 [0.2.2]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.2.2
 [0.2.1]: https://github.com/GabrieleRuggieri/becket/releases/tag/v0.2.1
