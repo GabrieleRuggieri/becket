@@ -40,6 +40,21 @@ pub fn embed_with_model(text: &str) -> Vec<f32> {
     embed_text(text)
 }
 
+/// Stable identifier of the embedding space currently in use.
+///
+/// Stored in index metadata at build time; queries compare it to their own
+/// value and skip vector search on mismatch (hash and ONNX vectors are not
+/// comparable).
+pub fn current_embedder_id() -> &'static str {
+    #[cfg(feature = "onnx")]
+    {
+        if !hash_embed_forced() && try_embed_onnx("becket embedder probe").is_some() {
+            return "onnx:bge-small-en-v1.5";
+        }
+    }
+    "hash:v1"
+}
+
 #[cfg(not(feature = "onnx"))]
 pub fn preload_onnx_model() {}
 

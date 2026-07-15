@@ -1,19 +1,50 @@
 //! Multi-level symbol index for precise call and import resolution.
+//!
+//! Resolution ladder (strongest evidence first):
+//! 1. same file (`FileScoped`)
+//! 2. through the importing file's import table (`ImportResolved`)
+//! 3. same directory (`DirScoped`)
+//! 4. unique name across the repo (`GlobalUnique`)
+//! 5. ambiguous name → capped candidate edges (`Candidate`) instead of a
+//!    silent false negative.
+//!
+//! Every edge carries a `resolution` tier and the derived `confidence`, so
+//! ranking and prompts can weigh syntactic guesses below verified links.
 
-use std::collections::HashMap;
+mod imports;
+
+pub use imports::{FileImportTable, ImportResolver};
+
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use becket_schema::artifacts::{DependencyEdgeRecord, SymbolRecord};
-use becket_schema::edge::EdgeType;
+use becket_schema::edge::{EdgeResolution, EdgeType};
 use becket_schema::symbol::Visibility;
 
 use crate::ids::stable_edge_id;
 use crate::parse::{ParsedCall, ParsedImport, ParsedInheritance};
 
+/// Maximum candidate edges emitted for one ambiguous call site.
+pub const MAX_CANDIDATE_EDGES: usize = 3;
+/// Ambiguous names with more repo-wide matches than this are dropped entirely
+/// (utility names like `get`/`init` would otherwise flood the graph).
+pub const MAX_AMBIGUOUS_MATCHES: usize = 8;
+
+/// Outcome of resolving one reference.
+pub enum ResolvedRef<'a> {
+    /// Unambiguous target with the tier that produced it.
+    One(&'a SymbolRecord, EdgeResolution),
+    /// Ambiguous: capped, deterministic candidate set.
+    Candidates(Vec<&'a SymbolRecord>),
+    /// No plausible target in the repository.
+    Unresolved,
+}
+
 /// In-memory index for O(1) symbol lookup during graph resolution.
 pub struct SymbolIndex<'a> {
     by_id: HashMap<&'a str, &'a SymbolRecord>,
-    by_file_and_name: HashMap<(&'a str, &'a str), &'a SymbolRecord>,
+    by_file_and_name: HashMap<(&'a str, &'a str), Vec<&'a SymbolRecord>>,
     by_dir_and_name: HashMap<(String, &'a str), Vec<&'a SymbolRecord>>,
     by_name: HashMap<&'a str, Vec<&'a SymbolRecord>>,
 }
@@ -22,13 +53,17 @@ impl<'a> SymbolIndex<'a> {
     /// Builds an index from the symbol catalog.
     pub fn new(symbols: &'a [SymbolRecord]) -> Self {
         let mut by_id = HashMap::with_capacity(symbols.len());
-        let mut by_file_and_name = HashMap::new();
+        let mut by_file_and_name: HashMap<(&'a str, &'a str), Vec<&'a SymbolRecord>> =
+            HashMap::new();
         let mut by_dir_and_name: HashMap<(String, &'a str), Vec<&'a SymbolRecord>> = HashMap::new();
         let mut by_name: HashMap<&'a str, Vec<&'a SymbolRecord>> = HashMap::new();
 
         for symbol in symbols {
             by_id.insert(symbol.id.as_str(), symbol);
-            by_file_and_name.insert((symbol.file_path.as_str(), symbol.name.as_str()), symbol);
+            by_file_and_name
+                .entry((symbol.file_path.as_str(), symbol.name.as_str()))
+                .or_default()
+                .push(symbol);
 
             if let Some(dir) = parent_dir(&symbol.file_path) {
                 by_dir_and_name
@@ -51,125 +86,251 @@ impl<'a> SymbolIndex<'a> {
         }
     }
 
-    /// Resolves a callee from a call site using scoped lookup (file → directory → unique global).
-    pub fn resolve_call(
+    /// Looks up a symbol by stable id.
+    pub fn by_id(&self, id: &str) -> Option<&'a SymbolRecord> {
+        self.by_id.get(id).copied()
+    }
+
+    /// Resolves a callee using the resolution ladder (see module docs).
+    pub fn resolve_ref(
         &self,
-        caller: &SymbolRecord,
+        caller_file: &str,
         callee_name: &str,
-    ) -> Option<&'a SymbolRecord> {
-        if let Some(symbol) = self
-            .by_file_and_name
-            .get(&(caller.file_path.as_str(), callee_name))
-        {
-            return Some(symbol);
+        import_table: Option<&FileImportTable>,
+    ) -> ResolvedRef<'a> {
+        // 1. Same file.
+        if let Some(matches) = self.by_file_and_name.get(&(caller_file, callee_name)) {
+            if let Some(first) = pick_deterministic(matches) {
+                return ResolvedRef::One(first, EdgeResolution::FileScoped);
+            }
         }
 
-        if let Some(dir) = parent_dir(&caller.file_path) {
-            if let Some(candidates) = self.by_dir_and_name.get(&(dir, callee_name)) {
-                if let Some(resolved) = disambiguate(candidates) {
-                    return Some(resolved);
+        // 2. Through the file's imports.
+        if let Some(table) = import_table {
+            if let Some(target_files) = table.targets_for(callee_name) {
+                let mut found: Vec<&'a SymbolRecord> = Vec::new();
+                for file in target_files {
+                    if let Some(matches) = self.by_file_and_name.get(&(file.as_str(), callee_name))
+                    {
+                        found.extend(matches.iter().copied());
+                    }
+                }
+                if let Some(first) = pick_deterministic(&found) {
+                    return ResolvedRef::One(first, EdgeResolution::ImportResolved);
                 }
             }
         }
 
-        self.by_name
-            .get(callee_name)
-            .and_then(|candidates| disambiguate(candidates))
-    }
+        // 3. Same directory (unique or unique-public).
+        if let Some(dir) = parent_dir(caller_file) {
+            if let Some(candidates) = self.by_dir_and_name.get(&(dir, callee_name)) {
+                if let Some(resolved) = disambiguate(candidates) {
+                    return ResolvedRef::One(resolved, EdgeResolution::DirScoped);
+                }
+            }
+        }
 
-    /// Resolves an imported name to a symbol (same rules as calls).
-    pub fn resolve_import(
-        &self,
-        importer: &SymbolRecord,
-        imported_name: &str,
-    ) -> Option<&'a SymbolRecord> {
-        self.resolve_call(importer, imported_name)
+        // 4./5. Global.
+        match self.by_name.get(callee_name) {
+            Some(candidates) if candidates.len() == 1 => {
+                ResolvedRef::One(candidates[0], EdgeResolution::GlobalUnique)
+            }
+            Some(candidates) => {
+                if let Some(resolved) = disambiguate(candidates) {
+                    return ResolvedRef::One(resolved, EdgeResolution::GlobalUnique);
+                }
+                if candidates.len() > MAX_AMBIGUOUS_MATCHES {
+                    return ResolvedRef::Unresolved;
+                }
+                let mut sorted: Vec<&'a SymbolRecord> = candidates.clone();
+                sorted.sort_by(|a, b| {
+                    a.file_path
+                        .cmp(&b.file_path)
+                        .then_with(|| a.start_line.cmp(&b.start_line))
+                });
+                sorted.truncate(MAX_CANDIDATE_EDGES);
+                ResolvedRef::Candidates(sorted)
+            }
+            None => ResolvedRef::Unresolved,
+        }
     }
 }
 
-/// Builds dependency edges from calls and imports with deterministic ids.
+/// Inputs for full graph resolution.
+pub struct ResolveInput<'a> {
+    /// Symbol catalog (stable ids).
+    pub symbols: &'a [SymbolRecord],
+    /// Unresolved call references.
+    pub calls: &'a [ParsedCall],
+    /// Unresolved import declarations.
+    pub imports: &'a [ParsedImport],
+    /// Unresolved inheritance references.
+    pub inheritance: &'a [ParsedInheritance],
+    /// Every repository-relative source path (for module resolution).
+    pub known_files: &'a HashSet<String>,
+}
+
+/// Resolution result: edges plus counters for the build report.
+pub struct ResolveOutput {
+    /// Deterministic, deduplicated dependency edges.
+    pub edges: Vec<DependencyEdgeRecord>,
+    /// Call sites with no plausible target in the repository.
+    pub unresolved_calls: usize,
+}
+
+/// Builds dependency edges from calls, imports, and inheritance.
 pub struct GraphResolver;
 
 impl GraphResolver {
-    /// Resolves call, import, and inheritance references to edges.
-    pub fn resolve(
-        symbols: &[SymbolRecord],
-        calls: &[ParsedCall],
-        imports: &[ParsedImport],
-        inheritance: &[ParsedInheritance],
-    ) -> Vec<DependencyEdgeRecord> {
-        let index = SymbolIndex::new(symbols);
+    /// Resolves all references to edges with per-edge resolution tiers.
+    pub fn resolve_all(input: ResolveInput<'_>) -> ResolveOutput {
+        let index = SymbolIndex::new(input.symbols);
+        let import_resolver = ImportResolver::build(input.imports, input.known_files);
         let mut edges = Vec::new();
-        let mut seen = HashMap::new();
+        let mut seen = HashSet::new();
+        let mut unresolved_calls = 0usize;
 
-        for call in calls {
-            let Some(caller) = index.by_id.get(call.caller_symbol_id.as_str()) else {
+        for call in input.calls {
+            let Some(caller) = index.by_id(&call.caller_symbol_id) else {
                 continue;
             };
-            let Some(callee) = index.resolve_call(caller, &call.callee_name) else {
-                continue;
-            };
-            if caller.id == callee.id {
-                continue;
+            let table = import_resolver.table_for(&caller.file_path);
+            match index.resolve_ref(&caller.file_path, &call.callee_name, table) {
+                ResolvedRef::One(callee, resolution) => {
+                    if caller.id != callee.id {
+                        push_edge(
+                            &mut edges,
+                            &mut seen,
+                            &caller.id,
+                            &callee.id,
+                            EdgeType::Calls,
+                            resolution,
+                        );
+                    }
+                }
+                ResolvedRef::Candidates(candidates) => {
+                    for callee in candidates {
+                        if caller.id != callee.id {
+                            push_edge(
+                                &mut edges,
+                                &mut seen,
+                                &caller.id,
+                                &callee.id,
+                                EdgeType::Calls,
+                                EdgeResolution::Candidate,
+                            );
+                        }
+                    }
+                }
+                ResolvedRef::Unresolved => unresolved_calls += 1,
             }
-            push_edge(
-                &mut edges,
-                &mut seen,
-                &caller.id,
-                &callee.id,
-                EdgeType::Calls,
-                1.0,
-            );
         }
 
-        for import in imports {
-            let Some(importer_symbol) = symbols
-                .iter()
-                .filter(|s| s.file_path == import.file_path)
-                .min_by_key(|s| s.start_line)
-            else {
-                continue;
-            };
-            let Some(target) = index.resolve_import(importer_symbol, &import.imported_name) else {
-                continue;
-            };
-            push_edge(
-                &mut edges,
-                &mut seen,
-                &importer_symbol.id,
-                &target.id,
-                EdgeType::Imports,
-                1.0,
-            );
+        // File-level imports: attach to the file's first declared symbol
+        // (documented approximation until file nodes exist) and resolve the
+        // target through the import table first.
+        let mut first_symbol_by_file: HashMap<&str, &SymbolRecord> = HashMap::new();
+        for symbol in input.symbols {
+            first_symbol_by_file
+                .entry(symbol.file_path.as_str())
+                .and_modify(|existing| {
+                    if symbol.start_line < existing.start_line {
+                        *existing = symbol;
+                    }
+                })
+                .or_insert(symbol);
         }
 
-        for edge in inheritance {
-            let Some(child) = index.by_id.get(edge.child_symbol_id.as_str()) else {
+        for import in input.imports {
+            let Some(importer_symbol) = first_symbol_by_file.get(import.file_path.as_str()) else {
                 continue;
             };
-            let Some(parent) = index.resolve_call(child, &edge.parent_name) else {
-                continue;
-            };
-            if child.id == parent.id {
-                continue;
+            let table = import_resolver.table_for(&import.file_path);
+            let local_name = import.alias.as_deref().unwrap_or(&import.imported_name);
+            match index.resolve_ref(&import.file_path, local_name, table) {
+                ResolvedRef::One(target, resolution) => {
+                    if importer_symbol.id != target.id {
+                        push_edge(
+                            &mut edges,
+                            &mut seen,
+                            &importer_symbol.id,
+                            &target.id,
+                            EdgeType::Imports,
+                            resolution,
+                        );
+                    }
+                }
+                // Ambiguous imports are dropped: import edges are a weak
+                // signal already, candidates would only add noise.
+                ResolvedRef::Candidates(_) | ResolvedRef::Unresolved => {}
             }
-            push_edge(
-                &mut edges,
-                &mut seen,
-                &child.id,
-                &parent.id,
-                edge.edge_type,
-                1.0,
-            );
+        }
+
+        for edge in input.inheritance {
+            let Some(child) = index.by_id(&edge.child_symbol_id) else {
+                continue;
+            };
+            let table = import_resolver.table_for(&child.file_path);
+            match index.resolve_ref(&child.file_path, &edge.parent_name, table) {
+                ResolvedRef::One(parent, resolution) => {
+                    if child.id != parent.id {
+                        push_edge(
+                            &mut edges,
+                            &mut seen,
+                            &child.id,
+                            &parent.id,
+                            edge.edge_type,
+                            resolution,
+                        );
+                    }
+                }
+                ResolvedRef::Candidates(candidates) => {
+                    for parent in candidates {
+                        if child.id != parent.id {
+                            push_edge(
+                                &mut edges,
+                                &mut seen,
+                                &child.id,
+                                &parent.id,
+                                edge.edge_type,
+                                EdgeResolution::Candidate,
+                            );
+                        }
+                    }
+                }
+                ResolvedRef::Unresolved => {}
+            }
         }
 
         edges.sort_by(|a, b| {
             a.src_symbol_id
                 .cmp(&b.src_symbol_id)
                 .then_with(|| a.dst_symbol_id.cmp(&b.dst_symbol_id))
-                .then_with(|| format!("{:?}", a.edge_type).cmp(&format!("{:?}", b.edge_type)))
+                .then_with(|| edge_type_as_str(a.edge_type).cmp(edge_type_as_str(b.edge_type)))
         });
-        edges
+
+        ResolveOutput {
+            edges,
+            unresolved_calls,
+        }
+    }
+
+    /// Backward-compatible resolution without an explicit file set.
+    pub fn resolve(
+        symbols: &[SymbolRecord],
+        calls: &[ParsedCall],
+        imports: &[ParsedImport],
+        inheritance: &[ParsedInheritance],
+    ) -> Vec<DependencyEdgeRecord> {
+        let known_files: HashSet<String> = symbols.iter().map(|s| s.file_path.clone()).collect();
+        Self::resolve_all(ResolveInput {
+            symbols,
+            calls,
+            imports,
+            inheritance,
+            known_files: &known_files,
+        })
+        .edges
     }
 
     /// Backward-compatible call-only resolution.
@@ -183,15 +344,15 @@ impl GraphResolver {
 
 fn push_edge(
     edges: &mut Vec<DependencyEdgeRecord>,
-    seen: &mut HashMap<String, ()>,
+    seen: &mut HashSet<String>,
     src: &str,
     dst: &str,
     edge_type: EdgeType,
-    confidence: f32,
+    resolution: EdgeResolution,
 ) {
     let type_str = edge_type_as_str(edge_type);
     let id = stable_edge_id(src, dst, type_str);
-    if seen.insert(id.clone(), ()).is_some() {
+    if !seen.insert(id.clone()) {
         return;
     }
     edges.push(DependencyEdgeRecord {
@@ -200,7 +361,8 @@ fn push_edge(
         dst_symbol_id: dst.to_string(),
         edge_type,
         boundary: None,
-        confidence,
+        confidence: resolution.confidence(),
+        resolution,
     });
 }
 
@@ -225,6 +387,14 @@ fn parent_dir(file_path: &str) -> Option<String> {
         .and_then(|p| p.to_str())
         .filter(|p| !p.is_empty())
         .map(str::to_string)
+}
+
+/// Picks the earliest declaration when several same-name symbols share a scope.
+fn pick_deterministic<'a>(candidates: &[&'a SymbolRecord]) -> Option<&'a SymbolRecord> {
+    candidates
+        .iter()
+        .min_by_key(|s| (s.file_path.as_str(), s.start_line))
+        .copied()
 }
 
 fn disambiguate<'a>(candidates: &[&'a SymbolRecord]) -> Option<&'a SymbolRecord> {
@@ -303,6 +473,9 @@ mod tests {
         assert_eq!(edges.len(), 3);
         assert!(edges.iter().any(|e| e.edge_type == EdgeType::Extends));
         assert!(edges.iter().any(|e| e.edge_type == EdgeType::Implements));
+        assert!(edges
+            .iter()
+            .all(|e| e.resolution == EdgeResolution::FileScoped));
     }
 
     #[test]
@@ -324,6 +497,9 @@ mod tests {
         ];
         let edges = GraphResolver::resolve_calls(&symbols, &calls);
         assert_eq!(edges.len(), 2);
+        assert!(edges
+            .iter()
+            .all(|e| e.confidence == EdgeResolution::FileScoped.confidence()));
     }
 
     #[test]
@@ -340,6 +516,90 @@ mod tests {
         let edges = GraphResolver::resolve_calls(&symbols, &calls);
         assert_eq!(edges.len(), 1);
         assert_eq!(edges[0].dst_symbol_id, "a");
+        assert_eq!(edges[0].resolution, EdgeResolution::FileScoped);
+    }
+
+    #[test]
+    fn import_table_beats_directory_and_global_guesses() {
+        let symbols = vec![
+            sym("caller", "handler", "src/api/handler.py"),
+            sym("right", "charge", "src/payment/gateway.py"),
+            sym("wrong", "charge", "src/legacy/old_gateway.py"),
+        ];
+        let calls = vec![ParsedCall {
+            caller_symbol_id: "caller".into(),
+            callee_name: "charge".into(),
+        }];
+        let imports = vec![ParsedImport {
+            file_path: "src/api/handler.py".into(),
+            imported_name: "charge".into(),
+            module_path: Some("src.payment.gateway".into()),
+            alias: None,
+        }];
+        let known: HashSet<String> = symbols.iter().map(|s| s.file_path.clone()).collect();
+        let output = GraphResolver::resolve_all(ResolveInput {
+            symbols: &symbols,
+            calls: &calls,
+            imports: &imports,
+            inheritance: &[],
+            known_files: &known,
+        });
+        let call_edges: Vec<_> = output
+            .edges
+            .iter()
+            .filter(|e| e.edge_type == EdgeType::Calls)
+            .collect();
+        assert_eq!(call_edges.len(), 1);
+        assert_eq!(call_edges[0].dst_symbol_id, "right");
+        assert_eq!(call_edges[0].resolution, EdgeResolution::ImportResolved);
+    }
+
+    #[test]
+    fn ambiguous_global_emits_capped_candidates_not_silence() {
+        let mut symbols = vec![sym("caller", "run", "src/main.rs")];
+        for i in 0..3 {
+            symbols.push(SymbolRecord {
+                visibility: Visibility::Private,
+                ..sym(&format!("t{i}"), "process", &format!("src/mod{i}/lib.rs"))
+            });
+        }
+        let calls = vec![ParsedCall {
+            caller_symbol_id: "caller".into(),
+            callee_name: "process".into(),
+        }];
+        let edges = GraphResolver::resolve_calls(&symbols, &calls);
+        assert_eq!(edges.len(), MAX_CANDIDATE_EDGES.min(3));
+        assert!(edges
+            .iter()
+            .all(|e| e.resolution == EdgeResolution::Candidate));
+        assert!(edges
+            .iter()
+            .all(|e| (e.confidence - EdgeResolution::Candidate.confidence()).abs() < f32::EPSILON));
+    }
+
+    #[test]
+    fn very_common_names_are_dropped() {
+        let mut symbols = vec![sym("caller", "run", "src/main.rs")];
+        for i in 0..(MAX_AMBIGUOUS_MATCHES + 2) {
+            symbols.push(SymbolRecord {
+                visibility: Visibility::Private,
+                ..sym(&format!("g{i}"), "get", &format!("src/m{i}/lib.rs"))
+            });
+        }
+        let calls = vec![ParsedCall {
+            caller_symbol_id: "caller".into(),
+            callee_name: "get".into(),
+        }];
+        let known: HashSet<String> = symbols.iter().map(|s| s.file_path.clone()).collect();
+        let output = GraphResolver::resolve_all(ResolveInput {
+            symbols: &symbols,
+            calls: &calls,
+            imports: &[],
+            inheritance: &[],
+            known_files: &known,
+        });
+        assert!(output.edges.is_empty());
+        assert_eq!(output.unresolved_calls, 1);
     }
 
     #[test]

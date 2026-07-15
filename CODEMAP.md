@@ -30,14 +30,15 @@ becket-cli::main
 ```
 becket-cli::main
   └─ commands::execute(Build)
-       └─ becket-core::BuildPipeline::run
+       └─ becket-core::BuildPipeline::run  (una transazione SQLite)
             ├─ FileWalker::discover
-            ├─ TreeSitterParser::parse_file
-            ├─ IndexStore::delete_symbols_for_path  (incremental)
-            ├─ GraphResolver::resolve_calls
+            ├─ IndexStore::prune_missing_files  (incremental)
+            ├─ per file: skip check → raw_refs cache | TreeSitterParser::parse_file
+            ├─ GraphResolver::resolve_all  (import-aware, confidence tiers)
             ├─ FlowReconstructor::reconstruct
             ├─ index_entrypoints
-            ├─ index_symbol_embeddings (optional)
+            ├─ index_symbol_embeddings (optional; embedder id in meta)
+            ├─ history::mine_co_change  (git log, fail-soft)
             ├─ IndexStore::export_artifacts
             ├─ ArtifactWriter::write_artifact × 5
             ├─ WikiCompiler::compile_all
@@ -61,12 +62,27 @@ becket-cli::commands::execute
 
 ```
 becket-query::assemble_context(symbol, budget, task)
-  ├─ resolve callers / callees / impact (graph BFS)
-  ├─ semantic_neighbor_ids (sqlite-vec, when embeddings indexed)
-  ├─ rank: root → callers → callees → semantic → affected
+  ├─ direct_call_neighbors (SQL point query, con confidence)
+  ├─ downstream_symbols (BFS anti-ciclo)
+  ├─ semantic_neighbor_hits (sqlite-vec; skip se embedding space ≠ build)
+  ├─ rank multi-segnale: proximity pesata per confidence + semantic
+  │   + co-change (git) + centralità, pesi per task
   ├─ slice source snippets from disk (greedy pack to budget)
   ├─ find_page_for_symbol → sanitize_for_context (wiki)
-  └─ render markdown bundle
+  └─ render markdown bundle (vicini incerti marcati `?`)
+```
+
+### `becket report` / `becket bench`
+
+```
+becket-cli::commands::execute
+  ├─ Report → becket-query::generate_report
+  │     → .becket/report/metrics.json + index.html (dashboard locale)
+  │       token savings vs full files · profilo confidence archi
+  │       stato wiki lint · integrità snippet
+  └─ Bench  → becket-query::run_bench --last N
+        → .becket/report/bench.json
+          recall dei file co-committati + costo token per commit recente
 ```
 
 ### `becket wiki`
@@ -130,6 +146,10 @@ flowchart BT
     entrypoints.json
     wiki_lint.json
     wiki_stale.json
+    report/
+      metrics.json
+      bench.json
+      index.html
     wiki/
       index.md
       *.md

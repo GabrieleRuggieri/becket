@@ -1,16 +1,15 @@
 //! Deterministic analysis core for Becket.
 //!
 //! Walks the repository, hashes files for incremental builds, extracts symbols
-//! with language heuristics (tree-sitter integration planned), and orchestrates
-//! the `becket build` pipeline.
+//! and references via tree-sitter, and orchestrates the `becket build` pipeline.
 
 pub mod build;
 pub mod domain;
 pub mod embed;
 pub mod error;
-pub mod extract;
 pub mod flow;
 pub mod graph;
+pub mod history;
 pub mod ids;
 pub mod language;
 pub mod parse;

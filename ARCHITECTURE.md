@@ -150,16 +150,17 @@ distribution, while still integrating cleanly with the AI ecosystem.
 | **Core, CLI & MCP server** | **Rust** (CLI via `clap`, MCP via the official **Rust MCP SDK** / `rmcp`) | One language end-to-end; native performance for the small→huge range; lowest latency; single static binary, easy distribution. |
 | **Parsing** | **tree-sitter** (native Rust bindings) | Incremental, error-tolerant parsers for dozens of languages; the de-facto standard for multi-language tooling; deterministic. |
 | **Language support** | **Plugin model** — one grammar + extraction ruleset per language, loaded from a registry | "As many languages as possible" without a monolith; community can add languages; ships a curated core set first. |
-| **Index / Memory DB** | **SQLite** (`rusqlite`) with **recursive CTEs** for graph traversal | Embedded, zero-config, transactional, extremely fast locally; recursive CTEs cover impact/flow traversal. |
+| **Index / Memory DB** | **SQLite** (`rusqlite`) with **in-memory BFS** over adjacency for graph traversal | Embedded, zero-config, transactional, extremely fast locally; cycle-safe reachability without recursive CTE row explosion. |
 | **Vector store** | **`sqlite-vec`** (same SQLite file) | Single embedded file, no extra service; aligns with local-first. |
 | **Embeddings** | **Bundled local ONNX model** via `ort` (+ `fastembed-rs`), small (e.g. BGE-small, ~100 MB) | The *only* model Becket ships. Runs in-process, offline, deterministic — **not** a server/daemon and **not** Ollama. Downloaded once on first build, then cached. License verified Apache-2.0/MIT. |
 | **LLM text enrichment** | **Exclusively host-delegated via MCP sampling** (Cursor / Claude Code / Codex model) | No bundled LLM, **no Ollama, no remote provider, no API keys**. If no MCP host is present, text enrichment is simply skipped — deterministic output is unaffected. |
 | **Artifact schemas** | **JSON Schema** + generated types, explicit `schemaVersion` | Output is a versioned public contract; schemas are testable and self-documenting. |
 | **Distribution** | **Native signed binaries** via `cargo-dist` (GitHub Releases) + a **thin npm wrapper** (`npx becket`) that fetches the right binary | Primary install path for users; shell installer on Releases as fallback. Contributors build from a clone. |
 
-> **Graph storage note:** we start with SQLite + recursive CTEs (simplest, fully embedded). If traversal
-> depth/latency on enormous monorepos becomes a bottleneck, an embedded graph engine
-> (e.g. **KùzuDB**, Cypher) is the pre-vetted upgrade path — same local-first footprint.
+> **Graph storage note:** we use SQLite for relational storage and load adjacency into memory for
+> BFS traversal (cycle-safe, predictable latency). If traversal on enormous monorepos becomes a
+> bottleneck, an embedded graph engine (e.g. **KùzuDB**, Cypher) is the pre-vetted upgrade path —
+> same local-first footprint.
 
 ### How AI works (final decision)
 Becket uses **two clearly separated kinds of "AI", and never bundles an LLM**:
@@ -188,18 +189,19 @@ No managed cloud database, no Kubernetes, no always-on web backend, **no team-sy
 
 ```mermaid
 flowchart LR
-    A["Walk files\n(respect .becketignore)"] --> B["Hash files\n(content + mtime)"]
+    A["Walk files\n(respect .becketignore)"] --> B["Hash files\n(content)"]
     B --> C{"Changed\nsince last run?"}
-    C -- "no" --> R["Reuse cached\nparse/graph"]
+    C -- "no" --> R["Reuse cached\nraw_refs payload"]
     C -- "yes" --> D["Parse with tree-sitter"]
-    D --> E["Extract symbols\n(funcs, classes, methods, vars)"]
-    E --> F["Resolve references\n(imports/calls/extends)"]
+    D --> E["Extract symbols\n+ imports + calls"]
+    E --> F["Import-aware resolve\n(confidence tiers)"]
     F --> X["Cross-repo link\n(service contracts)"]
     X --> G["Build graphs\nsymbol / dependency / call"]
     R --> G
     G --> H["Reconstruct flows\n+ detect entry points"]
-    H --> EMB2["Embeddings (local ONNX)\n+ deterministic names"]
-    EMB2 --> J["Persist to Index DB"]
+    H --> CO["Co-change mining\n(git log, fail-soft)"]
+    CO --> EMB2["Embeddings (local ONNX)\n+ embedder id in meta"]
+    EMB2 --> J["Persist to Index DB\n(single transaction)"]
     J --> K["Emit versioned JSON\n.becket/*.json"]
     J -. "lazy, on query via MCP host" .-> LLM["LLM names/summaries\n(MCP sampling) → cached"]
 ```
@@ -218,9 +220,9 @@ sequenceDiagram
 
     Agent->>MCP: get_impact { symbol: "UserService" }
     MCP->>Q: resolve symbol id
-    Q->>DB: recursive traversal (downstream edges)
+    Q->>DB: BFS over downstream edges (cycle-safe)
     DB-->>Q: affected modules, dependents, related tests
-    Q->>DB: vector lookup (related concepts)
+    Q->>DB: vector lookup (related concepts; skip on embedder mismatch)
     DB-->>Q: semantic neighbors
     Q-->>MCP: compact, ranked impact set
     MCP-->>Agent: JSON (token-optimized)
@@ -228,18 +230,20 @@ sequenceDiagram
 
 ### 3.3 Component responsibilities
 
-- **Ingestion & Walker** — discovers files, applies ignore rules, computes content hashes for incremental builds.
-- **Parser** — tree-sitter per language; tolerant to syntax errors; emits normalized AST/CST nodes.
-- **Resolver** — links references across files (imports, calls, inheritance), producing typed edges.
+- **Ingestion & Walker** — discovers files, applies ignore rules, computes content hashes for incremental builds; prunes deleted files from the index.
+- **Parser** — tree-sitter per language; tolerant to syntax errors; emits normalized AST/CST nodes and caches per-file parse payloads (`raw_refs`) for true incremental rebuild.
+- **Resolver** — import-aware call resolution: per-language import extraction, module-path → file mapping, then a confidence-tiered fallback ladder (`file_scoped` → `import_resolved` → `dir_scoped` → `global_unique` → `candidate`). Ambiguous matches emit capped low-confidence edges instead of being silently dropped. See §3.7.
+- **Co-change miner** — mines `git log` for file pairs that historically change together; feeds context ranking (fail-soft without git).
 - **Cross-repo Linker** — links symbols *across repos* in a workspace via service contracts (HTTP/gRPC client↔server, shared package names, OpenAPI/proto, message-queue topics). See §3.4.
 - **Graph Builder** — materializes three logical graphs (symbol graph, dependency graph, call graph).
 - **Flow Reconstructor** — stitches call/data paths into business flows; flags external-system & cross-repo boundaries.
-- **Impact Engine** — forward/backward reachability over edges; correlates tests and risk zones; traverses across repos.
-- **AI-Augmentation** — embeddings + optional LLM naming/summarization (via MCP sampling); always reversible and additive.
+- **Impact Engine** — forward/backward reachability over edges via in-memory BFS (visited set, cycle-safe); correlates tests and risk zones; traverses across repos.
+- **AI-Augmentation** — embeddings + optional LLM naming/summarization (via MCP sampling); embedder id recorded in index meta so queries skip semantic search on space mismatch; always reversible and additive.
 - **Knowledge Layer (Repo Wiki)** — compiles persistent markdown pages (module/service/flow/concept) from the graph, authored lazily via MCP sampling, with each page anchored to symbol ids. See §3.5.
 - **Wiki Lint** — re-validates pages against the current graph: flags stale claims, contradictions, orphan pages, and broken cross-links. The graph is ground truth. See §3.5.
-- **Context Assembly** — builds a per-query bundle (code snippets + relevant wiki + impact set) packed within a token budget. Slices real source; never fabricates code. See §3.6.
-- **Repository Memory** — SQLite index (rebuildable cache) + JSON artifacts + wiki markdown (stable, versioned output).
+- **Context Assembly** — builds a per-query bundle (code snippets + relevant wiki + impact set) packed within a token budget, ranked by multi-signal relevance (confidence-weighted proximity, semantic similarity, co-change, centrality). Slices real source; never fabricates code. See §3.6.
+- **Quality & Benchmarking** — `becket report` emits measurable index metrics and a local HTML dashboard; `becket bench` runs a reproducible retrieval benchmark against recent git history. See §3.7.
+- **Repository Memory** — SQLite index (rebuildable cache, transactional builds) + JSON artifacts + wiki markdown (stable, versioned output).
 - **Access Surfaces** — CLI and MCP server share one Query Engine; no logic is duplicated.
 
 ### 3.4 Multi-repo / workspace model
@@ -338,7 +342,7 @@ assembler builds a ranked bundle:
 flowchart LR
     Q["context(symbol, budget, task)"] --> R["Resolve symbol → graph node"]
     R --> N["Select neighborhood\n(task-specific depth)"]
-    N --> RANK["Rank by relevance\n(edge proximity + embedding similarity)"]
+    N --> RANK["Multi-signal rank\n(proximity × confidence\n+ semantic + co-change\n+ centrality)"]
     RANK --> SLICE["Slice real source snippets\n(from disk, with line ranges)"]
     R --> W["Attach grounded wiki page(s)"]
     R --> I["Attach impact set + related tests"]
@@ -350,12 +354,49 @@ flowchart LR
 
 - **Code is sliced from the real files on disk** (never model-generated), with `path` + line ranges so
   the agent can open the full file if needed.
-- **Budgeting** is greedy by relevance: the most relevant snippet, the symbol's wiki page, and the
-  impact set are included first; lower-relevance neighbors fill the remaining budget.
+- **Budgeting** is greedy by relevance score: the most relevant snippet, the symbol's wiki page, and the
+  impact set are included first; lower-relevance neighbors fill the remaining budget. Uncertain
+  call-graph neighbors are marked `?` in the markdown output.
 - **Primary output is markdown** (default) — one paste-ready file for agents. `--json` for tooling.
 - The bundle is the union of all three layers — *verified structure + meaning + code*.
 
-**Shipped (v0.2):** `becket context` returns markdown with real snippets, sanitized wiki, impact, and greedy packing to `--budget`. Task modes: `fix`, `refactor`, `onboard`.
+**Shipped:** `becket context` returns markdown with real snippets, sanitized wiki, impact, and greedy packing to `--budget`. Task modes: `fix`, `refactor`, `onboard`.
+
+### 3.7 Graph resolution, confidence & verifiability
+
+Tree-sitter is syntactic, not a type resolver. Becket addresses precision vs speed with an **internal
+semantic layer** (no LSP/SCIP dependency in v1) and explicit **edge confidence**:
+
+| `EdgeResolution` | Meaning | Confidence |
+|---|---|---|
+| `type_resolved` | Reserved for future SCIP/LSP deep mode | 1.0 |
+| `import_resolved` | Target resolved through an import statement | 0.9 |
+| `file_scoped` | Target in the same file as the call site | 0.85 |
+| `dir_scoped` | Unique (or unique public) match in the same directory | 0.7 |
+| `global_unique` | Single match across the repository | 0.5 |
+| `candidate` | One of several same-name matches (ambiguous) | 0.25 |
+
+Resolution ladder: same file → import table → same directory → global unique → capped candidate
+edges (max 3, deterministic). Hyper-common names (>8 matches) are dropped and counted as
+`unresolved_calls` in the build report.
+
+**Import extraction** is per-language: Rust `use` lists/aliases, Python `import`/`from … import … as`,
+JS/TS named/default/namespace imports, Go import blocks, Java imports. Module paths resolve to files
+via relative-path rules and suffix matching (`mod.rs`, `__init__.py`, `index.*`).
+
+**Verifiability (shipped):**
+
+- **`becket report`** — writes `.becket/report/metrics.json` and a self-contained `index.html`
+  dashboard: estimated token savings (bundle vs full files), edge confidence profile, wiki lint
+  status, and snippet freshness (disk integrity check).
+- **`becket bench --last N`** — uses recent git commits as ground truth: for each commit, picks a seed
+  symbol from a touched file, assembles context, and measures recall of co-committed files plus token
+  cost. Output: `.becket/report/bench.json`.
+
+Anyone can validate Becket on their own repo with `becket build && becket report && becket bench`.
+
+**Future (not in v1):** optional SCIP/LSP "deep mode" would populate `type_resolved` edges without
+changing the schema or ranking contract.
 
 ---
 
@@ -414,7 +455,8 @@ erDiagram
         string dst_symbol_id FK
         string type "calls|imports|extends|implements|references|reads|writes|http|grpc|queue"
         string boundary "nullable: network|queue|shared-lib (cross-repo)"
-        float  confidence "1.0 = static; <1.0 = inferred"
+        string resolution "import_resolved|file_scoped|dir_scoped|global_unique|candidate|type_resolved"
+        float  confidence "derived from resolution tier; 1.0 = strongest"
     }
     MODULE {
         string id PK
@@ -476,12 +518,15 @@ erDiagram
 |---|---|---|
 | `architecture.json` | MODULE + layer/edge summary | High-level structural map |
 | `symbols.json` | SYMBOL | Symbol catalog with locations & FQNs |
-| `dependencies.json` | EDGE (imports/calls) | Dependency graph |
+| `dependencies.json` | EDGE (imports/calls) + `resolution` | Dependency graph with confidence tiers (schema `1.1.0`) |
 | `flows.json` | FLOW + FLOW_STEP | Reconstructed business flows |
 | `entrypoints.json` | ENTRYPOINT | Detected entry points |
 | `cross_repo.json` | cross-repo EDGE | Workspace service-boundary edges |
 | `wiki/index.md` | WIKI_PAGE (router) | Table of contents / page router |
 | `wiki/*.md` | WIKI_PAGE | Grounded knowledge pages (frontmatter anchors symbol ids) |
+| `report/metrics.json` | computed | Index quality metrics (`becket report`) |
+| `report/bench.json` | computed | Retrieval benchmark results (`becket bench`) |
+| `report/index.html` | computed | Local HTML dashboard (`becket report`) |
 
 > Every **JSON** artifact embeds `schemaVersion` and is produced deterministically (byte-identical
 > rebuilds). Schema changes follow **semantic versioning**; breaking changes bump the major and ship a
@@ -529,11 +574,13 @@ becket context <symbol>  [--budget <tokens>] [--task fix|refactor|onboard] [--js
 becket wiki   sync  [--all]                    # recompile stale pages (structure; prose preserved)
 becket wiki   lint  [--json] [--strict]        # stale / claims / links / orphans vs graph
 becket wiki   show  <page|symbol>              # print grounded page
+becket report [--json] [--open]               # index quality metrics + HTML dashboard
+becket bench  [--last N] [--json]             # retrieval benchmark vs git history
 becket domain  rename <auto-id> <name>
 becket domain  add    <name> <path|symbol>...
 ```
 
-**Shipped (v0.2):** `build`, `impact`, `flow`, `context` (markdown bundle), `wiki`, `domain`, `workspace build`.
+**Shipped:** `build`, `impact`, `flow`, `context` (markdown bundle), `wiki`, `report`, `bench`, `domain`, `workspace build`.
 
 `context` returns code snippets + wiki + impact packed to `--budget`. `wiki sync` recompiles graph structure; prose enrichment via MCP `get_wiki enrich=true`.
 
@@ -629,7 +676,7 @@ Every decision below is settled; there are **no open questions** blocking develo
 | 1 | Language | **Rust** end-to-end (core, CLI, MCP). |
 | 2 | Multi-language | **tree-sitter**, plugin per language. First-class set at launch: **TypeScript/JavaScript, Python, Go, Java, Rust**; more added as plugins. |
 | 3 | Scale & latency | Designed for small→huge repos. **Target budgets** (enforced by CI benchmarks): incremental rebuild of a changed file **< 200 ms**; query (`impact`/`flow`/`context`) **p95 < 100 ms** on a warm index; cold full build streamed with progress. |
-| 4 | Storage | **SQLite** (`rusqlite`) + recursive CTEs; **`sqlite-vec`** for vectors; single embedded file. |
+| 4 | Storage | **SQLite** (`rusqlite`) + in-memory BFS adjacency; **`sqlite-vec`** for vectors; single embedded file. |
 | 5 | Embeddings | One **bundled local ONNX model** (BGE-small class, ~100 MB), downloaded on first build & cached. In-process, offline, deterministic. `--no-embeddings` opt-out. |
 | 6 | LLM enrichment | **Host-delegated via MCP sampling only** (Cursor/Claude Code/Codex). **No bundled LLM, no Ollama, no remote provider, no keys.** Lazy + cached; build never needs a model. |
 | 7 | Multi-repo | **First-class workspace** model; cross-repo linking via service contracts (HTTP/gRPC/proto/OpenAPI/queues/shared libs). Single-repo = workspace of 1. |

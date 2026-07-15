@@ -19,6 +19,10 @@ becket flow services
 
 # Check wiki pages against the live graph
 becket wiki lint
+
+# Validate index quality (token savings, graph confidence, wiki health)
+becket report
+becket bench --last 30
 ```
 
 ## Use with Cursor / Claude Code
@@ -33,3 +37,5 @@ See [website docs](../website/docs.html) for full setup.
 ## What to expect
 
 After `becket build`, Becket writes `.becket/` with JSON artifacts and grounded wiki pages. The `capture` function in `src/services/payments.rs` is a good starting symbol — it sits in the middle of the payment flow.
+
+`becket report` opens a local dashboard at `.becket/report/index.html` with measurable metrics. On tiny repos like this demo, token savings may be negative (bundle overhead exceeds tiny source files) — that is expected and reported honestly.

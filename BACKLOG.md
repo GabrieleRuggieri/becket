@@ -49,6 +49,23 @@
 | P1-14 | Bench | Budget test: bundle quality su fixture `flows-payment` + `bench-small` | ✅ test integrazione |
 | P1-15 | Release | Tag **v0.2.0** con Knowledge Layer | Da taggare |
 
+## P1 — Graph quality & verifiability (unreleased)
+
+> Import-aware resolution, confidence tiers, multi-signal ranking, local dashboard + benchmark.
+
+| ID | Area | Task | Note |
+|---|---|---|---|
+| P1-16 | Graph | **Import-aware call resolution** + `EdgeResolution` confidence tiers (schema `1.1.0`) | ✅ |
+| P1-17 | Graph | **Candidate edges** per match ambigui (non drop silenzioso) | ✅ |
+| P1-18 | Build | **Incrementale vero** via cache `raw_refs` + build transazionale | ✅ |
+| P1-19 | Graph | **BFS anti-ciclo** downstream/upstream + `upstream` in dependencies | ✅ |
+| P1-20 | Ranking | **Multi-segnale**: proximity × confidence + semantic + co-change + centralità | ✅ |
+| P1-21 | History | **Co-change mining** da `git log` (fail-soft) | ✅ |
+| P1-22 | Embed | **Embedder id guard** — skip semantic search su mismatch | ✅ |
+| P1-23 | DX | **`becket report`** — `metrics.json` + dashboard HTML locale | ✅ |
+| P1-24 | DX | **`becket bench --last N`** — benchmark retrieval vs git history | ✅ |
+| P1-25 | Release | Tag release con graph quality + verificabilità | Da taggare |
+
 ## P1 — Architettura v1 (completato)
 
 | ID | Area | Task | Note |
@@ -75,9 +92,10 @@
 
 ## Prossimo consigliato (ordine adozione)
 
-1. **P1-15** — tag v0.2.0 + release notes Knowledge Layer
-2. **P1-R1 + P1-R2 + P1-R3** — v0.1 adozione (se non già fatto)
+1. **P1-25** — tag release graph quality + verificabilità + release notes
+2. **P1-15** — tag v0.2.0 + release notes Knowledge Layer (se non già fatto)
 3. **P2-5 / P2-6** — wiki router ibrido e semantic lint (scala)
+4. **SCIP/LSP deep mode** — popolare `type_resolved` senza cambiare schema (futuro)
 
 ---
 

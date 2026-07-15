@@ -51,6 +51,11 @@
           "description": "Stable edge identifier.",
           "type": "string"
         },
+        "resolution": {
+          "$ref": "#/$defs/EdgeResolution",
+          "default": "file_scoped",
+          "description": "How the edge target was resolved (drives `confidence`)."
+        },
         "srcSymbolId": {
           "description": "Source symbol id.",
           "type": "string"
@@ -64,6 +69,41 @@
         "confidence"
       ],
       "type": "object"
+    },
+    "EdgeResolution": {
+      "description": "How an edge target was resolved, from strongest to weakest evidence.\n\nDetermines the edge `confidence` and lets consumers (ranking, prompts)\ndistinguish type-resolved facts from syntactic guesses.",
+      "oneOf": [
+        {
+          "const": "type_resolved",
+          "description": "Resolved by a semantic indexer (SCIP/LSP deep mode).",
+          "type": "string"
+        },
+        {
+          "const": "import_resolved",
+          "description": "Resolved through an import statement to a specific file.",
+          "type": "string"
+        },
+        {
+          "const": "file_scoped",
+          "description": "Target declared in the same file as the source.",
+          "type": "string"
+        },
+        {
+          "const": "dir_scoped",
+          "description": "Unique (or unique public) match in the same directory.",
+          "type": "string"
+        },
+        {
+          "const": "global_unique",
+          "description": "Single match across the whole repository.",
+          "type": "string"
+        },
+        {
+          "const": "candidate",
+          "description": "One of several same-name candidates (ambiguous syntactic match).",
+          "type": "string"
+        }
+      ]
     },
     "EdgeType": {
       "description": "Typed relationship between two symbols.",

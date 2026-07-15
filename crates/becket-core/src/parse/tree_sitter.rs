@@ -14,7 +14,7 @@ use crate::language::Language as RepoLanguage;
 use crate::parse::http_routes::{self, ParsedHttpRoute};
 
 /// A single unresolved call edge (resolved to symbol ids in the graph builder).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParsedCall {
     /// Symbol id of the calling function/method.
     pub caller_symbol_id: String,
@@ -23,7 +23,7 @@ pub struct ParsedCall {
 }
 
 /// Entry point candidate detected during parsing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParsedEntrypoint {
     /// Symbol id for the entrypoint.
     pub symbol_id: String,
@@ -33,19 +33,25 @@ pub struct ParsedEntrypoint {
     pub label: Option<String>,
 }
 
-/// An unresolved import edge (file-level, resolved in the graph builder).
-#[derive(Debug, Clone)]
+/// An unresolved import declaration (resolved in the graph builder).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParsedImport {
     /// Repository-relative file path containing the import.
     pub file_path: String,
-    /// Imported symbol name (last segment of the use path).
+    /// Imported symbol name (last segment of the path when not itemized).
     pub imported_name: String,
+    /// Module path as written in source (`a.b.c`, `crate::x::y`, `./rel`).
+    #[serde(default)]
+    pub module_path: Option<String>,
+    /// Local alias when renamed (`as` clause).
+    #[serde(default)]
+    pub alias: Option<String>,
 }
 
 /// An unresolved inheritance edge (extends / implements).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParsedInheritance {
-    /// Child symbol id at parse time (remapped during build).
+    /// Child symbol id at parse time.
     pub child_symbol_id: String,
     /// Parent type or trait name.
     pub parent_name: String,
@@ -54,7 +60,7 @@ pub struct ParsedInheritance {
 }
 
 /// Symbols and relationships extracted from one source file.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct FileParseResult {
     /// Repository-relative file path.
     pub path: String,
@@ -280,13 +286,22 @@ fn walk_node(node: Node, source: &[u8], ctx: &mut ParseContext) {
                 ctx.record_call(&name);
             }
         }
-        // Rust use declarations
-        "use_declaration" | "import_statement" | "import_declaration" => {
-            if let Some(name) = extract_import_name(node, source) {
-                ctx.imports.push(ParsedImport {
-                    file_path: ctx.file_path.clone(),
-                    imported_name: name,
-                });
+        // Import declarations (Rust use, JS/TS/Python import, Java/Go import)
+        "use_declaration" | "import_statement" | "import_from_statement" | "import_declaration" => {
+            let file_path = ctx.file_path.clone();
+            let imports = extract_imports(node, source, &file_path);
+            if imports.is_empty() {
+                // Fallback: legacy name-only extraction.
+                if let Some(name) = extract_import_name(node, source) {
+                    ctx.imports.push(ParsedImport {
+                        file_path,
+                        imported_name: name,
+                        module_path: None,
+                        alias: None,
+                    });
+                }
+            } else {
+                ctx.imports.extend(imports);
             }
         }
         _ => {}
@@ -493,6 +508,368 @@ fn node_text(node: Node, source: &[u8]) -> Option<String> {
     }
 }
 
+/// Extracts structured imports (name + module path + alias) per language.
+fn extract_imports(node: Node, source: &[u8], file_path: &str) -> Vec<ParsedImport> {
+    let mut imports = Vec::new();
+    match node.kind() {
+        "use_declaration" => {
+            let argument = node.child_by_field_name("argument").or_else(|| {
+                let mut candidate = None;
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    if !matches!(child.kind(), "use" | ";" | "visibility_modifier") {
+                        candidate = Some(child);
+                        break;
+                    }
+                }
+                candidate
+            });
+            if let Some(argument) = argument {
+                extract_rust_use(argument, source, file_path, None, &mut imports);
+            }
+        }
+        "import_from_statement" => {
+            extract_python_from_import(node, source, file_path, &mut imports);
+        }
+        "import_statement" => {
+            // Shared kind between Python and JS/TS grammars.
+            if node.child_by_field_name("source").is_some() {
+                extract_js_import(node, source, file_path, &mut imports);
+            } else {
+                extract_python_import(node, source, file_path, &mut imports);
+            }
+        }
+        "import_declaration" => {
+            // Java scoped import or Go import block.
+            extract_java_or_go_import(node, source, file_path, &mut imports);
+        }
+        _ => {}
+    }
+    imports
+}
+
+/// Rust `use` tree: handles scoped paths, `as` aliases, and use lists.
+fn extract_rust_use(
+    node: Node,
+    source: &[u8],
+    file_path: &str,
+    prefix: Option<&str>,
+    imports: &mut Vec<ParsedImport>,
+) {
+    match node.kind() {
+        "scoped_identifier" | "identifier" | "crate" | "self" | "super" => {
+            if let Some(text) = node_text(node, source) {
+                let full = join_rust_path(prefix, &text);
+                let name = full.rsplit("::").next().unwrap_or(&full).to_string();
+                if name != "*" {
+                    imports.push(ParsedImport {
+                        file_path: file_path.to_string(),
+                        imported_name: name,
+                        module_path: Some(full),
+                        alias: None,
+                    });
+                }
+            }
+        }
+        "use_as_clause" => {
+            let path_text = node
+                .child_by_field_name("path")
+                .and_then(|n| node_text(n, source));
+            let alias_text = node
+                .child_by_field_name("alias")
+                .and_then(|n| node_text(n, source));
+            if let Some(path) = path_text {
+                let full = join_rust_path(prefix, &path);
+                let name = full.rsplit("::").next().unwrap_or(&full).to_string();
+                imports.push(ParsedImport {
+                    file_path: file_path.to_string(),
+                    imported_name: name,
+                    module_path: Some(full),
+                    alias: alias_text,
+                });
+            }
+        }
+        "scoped_use_list" => {
+            let path_text = node
+                .child_by_field_name("path")
+                .and_then(|n| node_text(n, source));
+            let full_prefix = match (&path_text, prefix) {
+                (Some(path), Some(existing)) => Some(format!("{existing}::{path}")),
+                (Some(path), None) => Some(path.clone()),
+                (None, existing) => existing.map(str::to_string),
+            };
+            if let Some(list) = node.child_by_field_name("list") {
+                let mut cursor = list.walk();
+                for child in list.children(&mut cursor) {
+                    extract_rust_use(child, source, file_path, full_prefix.as_deref(), imports);
+                }
+            }
+        }
+        "use_list" => {
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                extract_rust_use(child, source, file_path, prefix, imports);
+            }
+        }
+        "use_wildcard" => {
+            // Glob imports carry no name binding; skip.
+        }
+        _ => {}
+    }
+}
+
+fn join_rust_path(prefix: Option<&str>, path: &str) -> String {
+    match prefix {
+        Some(prefix) => format!("{prefix}::{path}"),
+        None => path.to_string(),
+    }
+}
+
+/// Python `import a.b.c [as x]`.
+fn extract_python_import(
+    node: Node,
+    source: &[u8],
+    file_path: &str,
+    imports: &mut Vec<ParsedImport>,
+) {
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        match child.kind() {
+            "dotted_name" => {
+                if let Some(text) = node_text(child, source) {
+                    let name = text.rsplit('.').next().unwrap_or(&text).to_string();
+                    imports.push(ParsedImport {
+                        file_path: file_path.to_string(),
+                        imported_name: name,
+                        module_path: Some(text),
+                        alias: None,
+                    });
+                }
+            }
+            "aliased_import" => {
+                let module = child
+                    .child_by_field_name("name")
+                    .and_then(|n| node_text(n, source));
+                let alias = child
+                    .child_by_field_name("alias")
+                    .and_then(|n| node_text(n, source));
+                if let Some(module) = module {
+                    let name = module.rsplit('.').next().unwrap_or(&module).to_string();
+                    imports.push(ParsedImport {
+                        file_path: file_path.to_string(),
+                        imported_name: name,
+                        module_path: Some(module),
+                        alias,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Python `from a.b import c [as x], d`.
+fn extract_python_from_import(
+    node: Node,
+    source: &[u8],
+    file_path: &str,
+    imports: &mut Vec<ParsedImport>,
+) {
+    let module = node
+        .child_by_field_name("module_name")
+        .and_then(|n| node_text(n, source))
+        .map(|text| python_module_to_path(&text));
+    let Some(module) = module else {
+        return;
+    };
+
+    let mut cursor = node.walk();
+    let mut past_import_keyword = false;
+    for child in node.children(&mut cursor) {
+        if child.kind() == "import" {
+            past_import_keyword = true;
+            continue;
+        }
+        if !past_import_keyword {
+            continue;
+        }
+        match child.kind() {
+            "dotted_name" => {
+                if let Some(name) = node_text(child, source) {
+                    imports.push(ParsedImport {
+                        file_path: file_path.to_string(),
+                        imported_name: name,
+                        module_path: Some(module.clone()),
+                        alias: None,
+                    });
+                }
+            }
+            "aliased_import" => {
+                let name = child
+                    .child_by_field_name("name")
+                    .and_then(|n| node_text(n, source));
+                let alias = child
+                    .child_by_field_name("alias")
+                    .and_then(|n| node_text(n, source));
+                if let Some(name) = name {
+                    imports.push(ParsedImport {
+                        file_path: file_path.to_string(),
+                        imported_name: name,
+                        module_path: Some(module.clone()),
+                        alias,
+                    });
+                }
+            }
+            "wildcard_import" => {}
+            _ => {}
+        }
+    }
+}
+
+/// Converts Python relative module syntax (`.utils`, `..pkg.mod`) to `./`-style.
+fn python_module_to_path(module: &str) -> String {
+    let dots = module.chars().take_while(|c| *c == '.').count();
+    if dots == 0 {
+        return module.to_string();
+    }
+    let rest = module[dots..].replace('.', "/");
+    let mut prefix = if dots == 1 {
+        "./".to_string()
+    } else {
+        "../".repeat(dots - 1)
+    };
+    prefix.push_str(&rest);
+    if rest.is_empty() {
+        prefix.pop(); // trailing slash for bare `.` / `..`
+    }
+    prefix
+}
+
+/// JS/TS `import { a as b }, c, * as ns from "./mod"`.
+fn extract_js_import(node: Node, source: &[u8], file_path: &str, imports: &mut Vec<ParsedImport>) {
+    let source_path = node
+        .child_by_field_name("source")
+        .and_then(|n| node_text(n, source))
+        .map(|raw| {
+            raw.trim_matches(|c| c == '"' || c == '\'' || c == '`')
+                .to_string()
+        });
+    let Some(module) = source_path else {
+        return;
+    };
+
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind() != "import_clause" {
+            continue;
+        }
+        let mut clause_cursor = child.walk();
+        for clause_child in child.children(&mut clause_cursor) {
+            match clause_child.kind() {
+                "identifier" => {
+                    // Default import.
+                    if let Some(name) = node_text(clause_child, source) {
+                        imports.push(ParsedImport {
+                            file_path: file_path.to_string(),
+                            imported_name: name,
+                            module_path: Some(module.clone()),
+                            alias: None,
+                        });
+                    }
+                }
+                "named_imports" => {
+                    let mut spec_cursor = clause_child.walk();
+                    for spec in clause_child.children(&mut spec_cursor) {
+                        if spec.kind() != "import_specifier" {
+                            continue;
+                        }
+                        let name = spec
+                            .child_by_field_name("name")
+                            .and_then(|n| node_text(n, source));
+                        let alias = spec
+                            .child_by_field_name("alias")
+                            .and_then(|n| node_text(n, source));
+                        if let Some(name) = name {
+                            imports.push(ParsedImport {
+                                file_path: file_path.to_string(),
+                                imported_name: name,
+                                module_path: Some(module.clone()),
+                                alias,
+                            });
+                        }
+                    }
+                }
+                "namespace_import" => {
+                    // `* as ns`: bind the namespace name to the module.
+                    let mut ns_cursor = clause_child.walk();
+                    for ns_child in clause_child.children(&mut ns_cursor) {
+                        if ns_child.kind() == "identifier" {
+                            if let Some(name) = node_text(ns_child, source) {
+                                imports.push(ParsedImport {
+                                    file_path: file_path.to_string(),
+                                    imported_name: name,
+                                    module_path: Some(module.clone()),
+                                    alias: None,
+                                });
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// Java `import a.b.C;` or Go `import [alias] "path"` blocks.
+fn extract_java_or_go_import(
+    node: Node,
+    source: &[u8],
+    file_path: &str,
+    imports: &mut Vec<ParsedImport>,
+) {
+    let mut stack = vec![node];
+    while let Some(current) = stack.pop() {
+        let mut cursor = current.walk();
+        for child in current.children(&mut cursor) {
+            match child.kind() {
+                "import_spec" => {
+                    let path = child
+                        .child_by_field_name("path")
+                        .and_then(|n| node_text(n, source))
+                        .map(|raw| raw.trim_matches('"').to_string());
+                    let alias = child
+                        .child_by_field_name("name")
+                        .and_then(|n| node_text(n, source));
+                    if let Some(path) = path {
+                        let name = path.rsplit('/').next().unwrap_or(&path).to_string();
+                        imports.push(ParsedImport {
+                            file_path: file_path.to_string(),
+                            imported_name: name,
+                            module_path: Some(path),
+                            alias,
+                        });
+                    }
+                }
+                "import_spec_list" => stack.push(child),
+                "scoped_identifier" => {
+                    // Java: full dotted path.
+                    if let Some(text) = node_text(child, source) {
+                        let name = text.rsplit('.').next().unwrap_or(&text).to_string();
+                        imports.push(ParsedImport {
+                            file_path: file_path.to_string(),
+                            imported_name: name,
+                            module_path: Some(text),
+                            alias: None,
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
 fn extract_import_name(node: Node, source: &[u8]) -> Option<String> {
     // Walk identifiers and take the last meaningful segment (imported symbol).
     let mut last: Option<String> = None;
@@ -580,6 +957,95 @@ impl Speakable for Dog {}
         assert_eq!(result.inheritance.len(), 1);
         assert_eq!(result.inheritance[0].edge_type, EdgeType::Implements);
         assert_eq!(result.inheritance[0].parent_name, "Speakable");
+    }
+
+    #[test]
+    fn extracts_python_from_import_with_module_and_alias() {
+        let source = "from app.payment.gateway import charge as do_charge, refund\n";
+        let result =
+            TreeSitterParser::parse_source("app/main.py", RepoLanguage::Python, source).unwrap();
+        assert_eq!(result.imports.len(), 2);
+        let charge = result
+            .imports
+            .iter()
+            .find(|i| i.imported_name == "charge")
+            .expect("charge import");
+        assert_eq!(charge.module_path.as_deref(), Some("app.payment.gateway"));
+        assert_eq!(charge.alias.as_deref(), Some("do_charge"));
+        let refund = result
+            .imports
+            .iter()
+            .find(|i| i.imported_name == "refund")
+            .expect("refund import");
+        assert!(refund.alias.is_none());
+    }
+
+    #[test]
+    fn extracts_python_relative_import() {
+        let source = "from ..billing import invoice\n";
+        let result =
+            TreeSitterParser::parse_source("app/api/handler.py", RepoLanguage::Python, source)
+                .unwrap();
+        assert_eq!(result.imports.len(), 1);
+        assert_eq!(result.imports[0].module_path.as_deref(), Some("../billing"));
+    }
+
+    #[test]
+    fn extracts_ts_named_imports_with_source() {
+        let source = "import { charge, refund as undo } from './services/billing';\n";
+        let result =
+            TreeSitterParser::parse_source("src/app.ts", RepoLanguage::TypeScript, source).unwrap();
+        assert_eq!(result.imports.len(), 2);
+        assert!(result
+            .imports
+            .iter()
+            .all(|i| i.module_path.as_deref() == Some("./services/billing")));
+        let undo = result
+            .imports
+            .iter()
+            .find(|i| i.imported_name == "refund")
+            .expect("refund import");
+        assert_eq!(undo.alias.as_deref(), Some("undo"));
+    }
+
+    #[test]
+    fn extracts_rust_use_list_with_full_paths() {
+        let source = "use crate::graph::{GraphResolver, SymbolIndex};\nfn f() {}\n";
+        let result =
+            TreeSitterParser::parse_source("src/build.rs", RepoLanguage::Rust, source).unwrap();
+        let names: Vec<_> = result
+            .imports
+            .iter()
+            .map(|i| i.imported_name.as_str())
+            .collect();
+        assert!(names.contains(&"GraphResolver"));
+        assert!(names.contains(&"SymbolIndex"));
+        assert!(result.imports.iter().all(|i| i
+            .module_path
+            .as_deref()
+            .is_some_and(|m| m.contains("graph"))));
+    }
+
+    #[test]
+    fn extracts_go_import_paths() {
+        let source = "package main\n\nimport (\n\tsvc \"example.com/app/billing\"\n)\n";
+        let result = TreeSitterParser::parse_source("main.go", RepoLanguage::Go, source).unwrap();
+        assert_eq!(result.imports.len(), 1);
+        assert_eq!(result.imports[0].imported_name, "billing");
+        assert_eq!(result.imports[0].alias.as_deref(), Some("svc"));
+    }
+
+    #[test]
+    fn extracts_java_import_path() {
+        let source = "import com.example.billing.Gateway;\nclass App {}\n";
+        let result =
+            TreeSitterParser::parse_source("App.java", RepoLanguage::Java, source).unwrap();
+        assert_eq!(result.imports.len(), 1);
+        assert_eq!(result.imports[0].imported_name, "Gateway");
+        assert_eq!(
+            result.imports[0].module_path.as_deref(),
+            Some("com.example.billing.Gateway")
+        );
     }
 
     #[test]

@@ -1,23 +1,29 @@
 //! `becket build` orchestration: walk, hash, extract, persist, emit artifacts.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
 use becket_schema::artifacts::EntrypointRecord;
 use becket_schema::edge::EdgeType;
 use becket_schema::symbol::EntrypointKind;
 use becket_store::{ArtifactWriter, BecketPaths, IndexStore};
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::domain::apply_domain_overrides;
 use crate::embed::index_symbol_embeddings;
 use crate::error::CoreError;
 use crate::flow::{CallEdge, FlowReconstructor};
-use crate::graph::GraphResolver;
+use crate::graph::{GraphResolver, ResolveInput};
+use crate::history::mine_co_change;
 use crate::ids::{stable_entrypoint_id, stable_file_id};
-use crate::parse::{FileParseResult, ParsedCall, TreeSitterParser};
+use crate::parse::{FileParseResult, TreeSitterParser};
 use crate::walker::{FileWalker, SourceFile};
 use crate::wiki::{WikiCompiler, WikiLinter};
+
+/// Meta key storing the embedding space id used at build time.
+pub const META_EMBEDDER: &str = "embedder";
+/// Meta key storing the last build report as JSON (consumed by `becket report`).
+pub const META_LAST_BUILD_REPORT: &str = "last_build_report";
 
 /// Options controlling a build run.
 #[derive(Debug, Clone)]
@@ -38,7 +44,7 @@ impl Default for BuildOptions {
 }
 
 /// Summary counters emitted after a successful build.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BuildReport {
     /// Total source files discovered.
     pub files_discovered: usize,
@@ -50,6 +56,9 @@ pub struct BuildReport {
     pub symbols_indexed: usize,
     /// Dependency edges resolved.
     pub edges_indexed: usize,
+    /// Call sites with no plausible target in the repository.
+    #[serde(default)]
+    pub unresolved_calls: usize,
     /// Entrypoints detected.
     pub entrypoints_indexed: usize,
     /// Flows auto-discovered.
@@ -58,6 +67,9 @@ pub struct BuildReport {
     pub embeddings_indexed: usize,
     /// Wiki pages compiled under `.becket/wiki/`.
     pub wiki_pages_indexed: usize,
+    /// Co-change file pairs mined from git history.
+    #[serde(default)]
+    pub co_change_pairs: usize,
     /// Path to `.becket/` output directory.
     pub output_dir: String,
 }
@@ -78,39 +90,70 @@ impl BuildPipeline {
     }
 
     /// Runs the full build: walk → parse → index → emit JSON artifacts.
+    ///
+    /// All index writes happen inside one transaction: a failed build leaves
+    /// the previous index intact instead of a half-written one.
     pub fn run(&self) -> Result<BuildReport, CoreError> {
+        let store = IndexStore::open(&self.paths.index_db)?;
+        store.begin()?;
+        let result = self.run_inner(&store);
+        match &result {
+            Ok(_) => store.commit()?,
+            Err(_) => store.rollback(),
+        }
+        result
+    }
+
+    fn run_inner(&self, store: &IndexStore) -> Result<BuildReport, CoreError> {
         let walker = FileWalker::new(&self.paths.root);
         let discovered = walker.discover()?;
 
-        let store = IndexStore::open(&self.paths.index_db)?;
         if !self.options.incremental {
             store.clear_all()?;
+        }
+
+        let live_paths: HashSet<String> =
+            discovered.iter().map(|f| f.relative_path.clone()).collect();
+        if self.options.incremental {
+            let pruned = store.prune_missing_files(&live_paths)?;
+            if pruned > 0 {
+                info!(pruned, "removed deleted files from index");
+            }
         }
 
         let mut files_parsed = 0usize;
         let mut files_skipped = 0usize;
         let mut symbols_indexed = 0usize;
-        let mut parse_cache: HashMap<String, FileParseResult> = HashMap::new();
+        // BTreeMap: deterministic iteration order for downstream indexing.
+        let mut parse_cache: BTreeMap<String, FileParseResult> = BTreeMap::new();
 
         for file in &discovered {
+            // Incremental fast path: unchanged files reuse the cached parse
+            // payload and are never re-read or re-parsed.
+            if self.should_skip_file(store, file)? {
+                if let Some(payload) = store.load_raw_refs(&file.relative_path)? {
+                    match serde_json::from_str::<FileParseResult>(&payload) {
+                        Ok(parsed) => {
+                            parse_cache.insert(file.relative_path.clone(), parsed);
+                            files_skipped += 1;
+                            continue;
+                        }
+                        Err(error) => {
+                            warn!(path = %file.relative_path, %error, "raw refs cache invalid; reparsing");
+                        }
+                    }
+                }
+            }
+
             let parsed = TreeSitterParser::parse_file(
                 &file.relative_path,
                 file.language,
                 &file.absolute_path,
             )?;
-            parse_cache.insert(file.relative_path.clone(), parsed);
-
-            if self.should_skip_file(&store, file)? {
-                files_skipped += 1;
-                continue;
-            }
-
-            let parsed = parse_cache.get(&file.relative_path).expect("just inserted");
 
             store.delete_symbols_for_path(&file.relative_path)?;
 
             let file_id = stable_file_id(&file.relative_path);
-
             store.upsert_file(
                 &file_id,
                 &file.relative_path,
@@ -124,24 +167,44 @@ impl BuildPipeline {
                 symbols_indexed += 1;
             }
 
+            let payload = serde_json::to_string(&parsed)
+                .map_err(|error| CoreError::Parse(error.to_string()))?;
+            store.upsert_raw_refs(&file.relative_path, &payload)?;
+
             files_parsed += 1;
             info!(path = %file.relative_path, symbols = parsed.symbols.len(), "parsed file");
+            parse_cache.insert(file.relative_path.clone(), parsed);
         }
 
         let all_symbols = store.load_symbols()?;
-        let all_calls = self.remap_calls(&parse_cache, &all_symbols);
-        let all_imports = collect_imports(&parse_cache);
-        let all_inheritance = self.remap_inheritance(&parse_cache, &all_symbols);
 
-        let edges =
-            GraphResolver::resolve(&all_symbols, &all_calls, &all_imports, &all_inheritance);
+        // Parse-time symbol ids are stable (content-derived), so calls and
+        // inheritance refs from both fresh and cached parses already point at
+        // the ids stored in the index; no remapping pass is needed.
+        let mut all_calls = Vec::new();
+        let mut all_imports = Vec::new();
+        let mut all_inheritance = Vec::new();
+        for parsed in parse_cache.values() {
+            all_calls.extend(parsed.calls.iter().cloned());
+            all_imports.extend(parsed.imports.iter().cloned());
+            all_inheritance.extend(parsed.inheritance.iter().cloned());
+        }
+
+        let resolve_output = GraphResolver::resolve_all(ResolveInput {
+            symbols: &all_symbols,
+            calls: &all_calls,
+            imports: &all_imports,
+            inheritance: &all_inheritance,
+            known_files: &live_paths,
+        });
+        let edges = resolve_output.edges;
         store.clear_edges()?;
         for edge in &edges {
             store.insert_edge(edge)?;
         }
 
         store.clear_entrypoints()?;
-        let entrypoints_indexed = self.index_entrypoints(&store, &all_symbols, &parse_cache)?;
+        let entrypoints_indexed = self.index_entrypoints(store, &all_symbols, &parse_cache)?;
 
         let call_edges: Vec<CallEdge> = edges
             .iter()
@@ -169,8 +232,15 @@ impl BuildPipeline {
             0
         } else {
             store.clear_symbol_vectors()?;
-            index_symbol_embeddings(&store, &all_symbols)?
+            let count = index_symbol_embeddings(store, &all_symbols)?;
+            store.set_meta(META_EMBEDDER, becket_embed::current_embedder_id())?;
+            count
         };
+
+        // Co-change mining (fails soft on non-git repositories).
+        let co_change_rows = mine_co_change(&self.paths.root);
+        store.replace_co_change(&co_change_rows)?;
+        let co_change_pairs = co_change_rows.len();
 
         let writer = ArtifactWriter::new(self.paths.clone());
         let (symbols, dependencies, flows, entrypoints, architecture) = store.export_artifacts()?;
@@ -181,21 +251,29 @@ impl BuildPipeline {
         writer.write_artifact("entrypoints", &entrypoints)?;
         writer.write_artifact("architecture", &architecture)?;
 
-        let wiki_pages_indexed = WikiCompiler::new(self.paths.clone()).compile_all(&store)?;
-        let _lint = WikiLinter::new(self.paths.clone()).run(&store)?;
+        let wiki_pages_indexed = WikiCompiler::new(self.paths.clone()).compile_all(store)?;
+        let _lint = WikiLinter::new(self.paths.clone()).run(store)?;
 
-        Ok(BuildReport {
+        let report = BuildReport {
             files_discovered: discovered.len(),
             files_parsed,
             files_skipped,
             symbols_indexed,
             edges_indexed: edges.len(),
+            unresolved_calls: resolve_output.unresolved_calls,
             entrypoints_indexed,
             flows_indexed,
             embeddings_indexed,
             wiki_pages_indexed,
+            co_change_pairs,
             output_dir: writer.output_dir().display().to_string(),
-        })
+        };
+
+        if let Ok(json) = serde_json::to_string(&report) {
+            store.set_meta(META_LAST_BUILD_REPORT, &json)?;
+        }
+
+        Ok(report)
     }
 
     fn should_skip_file(&self, store: &IndexStore, file: &SourceFile) -> Result<bool, CoreError> {
@@ -208,83 +286,12 @@ impl BuildPipeline {
         Ok(false)
     }
 
-    /// Maps parsed calls to stable symbol ids currently stored in the index.
-    fn remap_calls(
-        &self,
-        parse_cache: &HashMap<String, FileParseResult>,
-        db_symbols: &[becket_schema::artifacts::SymbolRecord],
-    ) -> Vec<ParsedCall> {
-        let mut remapped = Vec::new();
-
-        for parsed in parse_cache.values() {
-            let parse_id_to_name: HashMap<&str, &str> = parsed
-                .symbols
-                .iter()
-                .map(|s| (s.id.as_str(), s.name.as_str()))
-                .collect();
-
-            for call in &parsed.calls {
-                let Some(caller_name) = parse_id_to_name.get(call.caller_symbol_id.as_str()) else {
-                    continue;
-                };
-                let Some(db_caller) = db_symbols
-                    .iter()
-                    .find(|s| s.file_path == parsed.path && s.name == *caller_name)
-                else {
-                    continue;
-                };
-                remapped.push(ParsedCall {
-                    caller_symbol_id: db_caller.id.clone(),
-                    callee_name: call.callee_name.clone(),
-                });
-            }
-        }
-
-        remapped
-    }
-
-    /// Maps parsed inheritance edges to stable symbol ids in the index.
-    fn remap_inheritance(
-        &self,
-        parse_cache: &HashMap<String, FileParseResult>,
-        db_symbols: &[becket_schema::artifacts::SymbolRecord],
-    ) -> Vec<crate::parse::ParsedInheritance> {
-        let mut remapped = Vec::new();
-
-        for parsed in parse_cache.values() {
-            let parse_id_to_name: HashMap<&str, &str> = parsed
-                .symbols
-                .iter()
-                .map(|s| (s.id.as_str(), s.name.as_str()))
-                .collect();
-
-            for edge in &parsed.inheritance {
-                let Some(child_name) = parse_id_to_name.get(edge.child_symbol_id.as_str()) else {
-                    continue;
-                };
-                let Some(db_child) = db_symbols
-                    .iter()
-                    .find(|s| s.file_path == parsed.path && s.name == *child_name)
-                else {
-                    continue;
-                };
-                remapped.push(crate::parse::ParsedInheritance {
-                    child_symbol_id: db_child.id.clone(),
-                    parent_name: edge.parent_name.clone(),
-                    edge_type: edge.edge_type,
-                });
-            }
-        }
-
-        remapped
-    }
-
     /// Indexes program and HTTP entrypoints from parse results.
     fn index_entrypoints(
         &self,
         store: &IndexStore,
         symbols: &[becket_schema::artifacts::SymbolRecord],
-        parse_cache: &HashMap<String, FileParseResult>,
+        parse_cache: &BTreeMap<String, FileParseResult>,
     ) -> Result<usize, CoreError> {
         let mut count = 0usize;
         let mut seen = std::collections::HashSet::new();
@@ -330,13 +337,4 @@ impl BuildPipeline {
         }
         Ok(count)
     }
-}
-
-fn collect_imports(
-    parse_cache: &HashMap<String, FileParseResult>,
-) -> Vec<crate::parse::ParsedImport> {
-    parse_cache
-        .values()
-        .flat_map(|parsed| parsed.imports.iter().cloned())
-        .collect()
 }

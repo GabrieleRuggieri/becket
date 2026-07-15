@@ -92,6 +92,24 @@ enum Commands {
         #[command(subcommand)]
         action: WikiAction,
     },
+    /// Generate index-quality metrics and a local HTML dashboard.
+    Report {
+        /// Emit metrics as JSON to stdout instead of a summary.
+        #[arg(long)]
+        json: bool,
+        /// Open the dashboard in the default browser after generating it.
+        #[arg(long)]
+        open: bool,
+    },
+    /// Reproducible retrieval benchmark against recent git history.
+    Bench {
+        /// Number of recent commits to evaluate.
+        #[arg(long, default_value_t = 20)]
+        last: usize,
+        /// Emit the full report as JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 /// CLI task mode for `becket context`.

@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 /// An outbound HTTP call detected in source (client side).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedHttpClient {
     /// Repository-relative file path.
     pub file_path: String,

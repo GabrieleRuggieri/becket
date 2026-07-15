@@ -1,12 +1,13 @@
 //! SQLite schema, migrations, and query helpers for the index store.
 
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 
 use becket_schema::artifacts::{
     ArchitectureArtifact, DependenciesArtifact, EntrypointsArtifact, FlowRecord, FlowsArtifact,
     SymbolRecord, SymbolsArtifact,
 };
-use becket_schema::edge::{BoundaryKind, EdgeType};
+use becket_schema::edge::{BoundaryKind, EdgeResolution, EdgeType};
 use becket_schema::symbol::{EntrypointKind, SymbolKind, Visibility};
 use rusqlite::{params, Connection, OptionalExtension};
 use zerocopy::IntoBytes;
@@ -149,9 +150,78 @@ impl IndexStore {
                 source      TEXT NOT NULL DEFAULT 'mcp_sampling',
                 PRIMARY KEY (entity_kind, entity_id)
             );
+
+            CREATE TABLE IF NOT EXISTS raw_refs (
+                file_path TEXT PRIMARY KEY,
+                payload   TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS co_change (
+                file_a TEXT NOT NULL,
+                file_b TEXT NOT NULL,
+                count  INTEGER NOT NULL,
+                PRIMARY KEY (file_a, file_b)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_co_change_a ON co_change(file_a);
+            CREATE INDEX IF NOT EXISTS idx_co_change_b ON co_change(file_b);
             ",
         )?;
+        self.ensure_edges_resolution_column()?;
         self.ensure_symbol_vec_table()?;
+        Ok(())
+    }
+
+    /// Adds the `resolution` column to pre-1.1 databases (idempotent).
+    fn ensure_edges_resolution_column(&self) -> Result<(), StoreError> {
+        let has_column: bool = self
+            .conn
+            .prepare("SELECT 1 FROM pragma_table_info('edges') WHERE name = 'resolution'")?
+            .exists([])?;
+        if !has_column {
+            self.conn.execute_batch(
+                "ALTER TABLE edges ADD COLUMN resolution TEXT NOT NULL DEFAULT 'file_scoped';",
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Begins an exclusive write transaction (pair with [`Self::commit`]).
+    pub fn begin(&self) -> Result<(), StoreError> {
+        self.conn.execute_batch("BEGIN IMMEDIATE;")?;
+        Ok(())
+    }
+
+    /// Commits the current transaction.
+    pub fn commit(&self) -> Result<(), StoreError> {
+        self.conn.execute_batch("COMMIT;")?;
+        Ok(())
+    }
+
+    /// Rolls back the current transaction (best effort).
+    pub fn rollback(&self) {
+        let _ = self.conn.execute_batch("ROLLBACK;");
+    }
+
+    /// Reads a metadata value by key.
+    pub fn get_meta(&self, key: &str) -> Result<Option<String>, StoreError> {
+        let value = self
+            .conn
+            .query_row(
+                "SELECT value FROM meta WHERE key = ?1",
+                params![key],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(value)
+    }
+
+    /// Writes a metadata key/value pair.
+    pub fn set_meta(&self, key: &str, value: &str) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO meta (key, value) VALUES (?1, ?2)",
+            params![key, value],
+        )?;
         Ok(())
     }
 
@@ -177,9 +247,104 @@ impl IndexStore {
             DELETE FROM modules;
             DELETE FROM files;
             DELETE FROM symbol_vec;
+            DELETE FROM raw_refs;
             ",
         )?;
         Ok(())
+    }
+
+    /// Persists the raw (unresolved) parse payload for a file.
+    pub fn upsert_raw_refs(&self, file_path: &str, payload: &str) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO raw_refs (file_path, payload) VALUES (?1, ?2)",
+            params![file_path, payload],
+        )?;
+        Ok(())
+    }
+
+    /// Loads the raw parse payload for a file, if cached.
+    pub fn load_raw_refs(&self, file_path: &str) -> Result<Option<String>, StoreError> {
+        let payload = self
+            .conn
+            .query_row(
+                "SELECT payload FROM raw_refs WHERE file_path = ?1",
+                params![file_path],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(payload)
+    }
+
+    /// Loads all cached raw parse payloads keyed by file path.
+    pub fn load_all_raw_refs(&self) -> Result<Vec<(String, String)>, StoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT file_path, payload FROM raw_refs ORDER BY file_path")?;
+        let rows = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Removes the raw parse payload for a file.
+    pub fn delete_raw_refs(&self, file_path: &str) -> Result<(), StoreError> {
+        self.conn.execute(
+            "DELETE FROM raw_refs WHERE file_path = ?1",
+            params![file_path],
+        )?;
+        Ok(())
+    }
+
+    /// Removes stale file rows (and cascaded symbols/raw refs) not in `live_paths`.
+    pub fn prune_missing_files(&self, live_paths: &HashSet<String>) -> Result<usize, StoreError> {
+        let mut stmt = self.conn.prepare("SELECT path FROM files")?;
+        let stored: Vec<String> = stmt
+            .query_map([], |row| row.get(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut removed = 0usize;
+        for path in stored {
+            if !live_paths.contains(&path) {
+                self.delete_symbols_for_path(&path)?;
+                self.delete_raw_refs(&path)?;
+                self.conn
+                    .execute("DELETE FROM files WHERE path = ?1", params![path])?;
+                removed += 1;
+            }
+        }
+        Ok(removed)
+    }
+
+    /// Replaces all co-change rows (mined from git history at build time).
+    pub fn replace_co_change(&self, rows: &[(String, String, u32)]) -> Result<(), StoreError> {
+        self.conn.execute("DELETE FROM co_change", [])?;
+        let mut stmt = self.conn.prepare(
+            "INSERT OR REPLACE INTO co_change (file_a, file_b, count) VALUES (?1, ?2, ?3)",
+        )?;
+        for (a, b, count) in rows {
+            stmt.execute(params![a, b, count])?;
+        }
+        Ok(())
+    }
+
+    /// Returns co-change counts for a file: `(other_file, count)`.
+    pub fn co_change_for_file(&self, file_path: &str) -> Result<Vec<(String, u32)>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT file_b, count FROM co_change WHERE file_a = ?1
+             UNION ALL
+             SELECT file_a, count FROM co_change WHERE file_b = ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![file_path], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Counts co-change pairs currently indexed.
+    pub fn count_co_change_pairs(&self) -> Result<usize, StoreError> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM co_change", [], |row| row.get(0))?;
+        Ok(count as usize)
     }
 
     /// Clears user domain overrides (for tests or full reset).
@@ -375,8 +540,8 @@ impl IndexStore {
     ) -> Result<(), StoreError> {
         self.conn.execute(
             "INSERT OR REPLACE INTO edges
-             (id, src_symbol_id, dst_symbol_id, edge_type, boundary, confidence)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+             (id, src_symbol_id, dst_symbol_id, edge_type, boundary, confidence, resolution)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 edge.id,
                 edge.src_symbol_id,
@@ -384,6 +549,7 @@ impl IndexStore {
                 edge_type_to_str(edge.edge_type),
                 edge.boundary.map(boundary_to_str),
                 edge.confidence,
+                edge.resolution.as_str(),
             ],
         )?;
         Ok(())
@@ -502,6 +668,11 @@ impl IndexStore {
 
     /// Returns downstream symbol ids reachable within `depth` hops.
     ///
+    /// Cycle-safe breadth-first traversal (a visited set bounds work by node
+    /// count, unlike a recursive CTE whose row count grows with path count on
+    /// cyclic graphs). Results are deterministic: BFS order with sorted
+    /// neighbor expansion.
+    ///
     /// # Errors
     ///
     /// Returns [`StoreError::Database`] on SQLite failure.
@@ -510,23 +681,169 @@ impl IndexStore {
         root_symbol_id: &str,
         depth: u32,
     ) -> Result<Vec<String>, StoreError> {
-        let mut stmt = self.conn.prepare(
-            "WITH RECURSIVE reach(id, depth) AS (
-                SELECT dst_symbol_id, 1 FROM edges WHERE src_symbol_id = ?1
-                UNION ALL
-                SELECT e.dst_symbol_id, r.depth + 1
-                FROM edges e
-                JOIN reach r ON e.src_symbol_id = r.id
-                WHERE r.depth < ?2
-             )
-             SELECT DISTINCT id FROM reach",
-        )?;
-        let rows = stmt.query_map(params![root_symbol_id, depth], |row| row.get(0))?;
-        let mut ids = Vec::new();
-        for row in rows {
-            ids.push(row?);
+        let adjacency = self.load_adjacency()?;
+        let mut visited: HashSet<&str> = HashSet::new();
+        let mut queue: VecDeque<(&str, u32)> = VecDeque::new();
+        let mut order: Vec<String> = Vec::new();
+
+        visited.insert(root_symbol_id);
+        queue.push_back((root_symbol_id, 0));
+
+        while let Some((current, dist)) = queue.pop_front() {
+            if dist >= depth {
+                continue;
+            }
+            if let Some(neighbors) = adjacency.get(current) {
+                for next in neighbors {
+                    if visited.insert(next.as_str()) {
+                        order.push(next.clone());
+                        queue.push_back((next.as_str(), dist + 1));
+                    }
+                }
+            }
         }
-        Ok(ids)
+
+        Ok(order)
+    }
+
+    /// Returns upstream symbol ids (callers/dependents) within `depth` hops.
+    pub fn upstream_symbols(
+        &self,
+        root_symbol_id: &str,
+        depth: u32,
+    ) -> Result<Vec<String>, StoreError> {
+        let adjacency = self.load_reverse_adjacency()?;
+        let mut visited: HashSet<&str> = HashSet::new();
+        let mut queue: VecDeque<(&str, u32)> = VecDeque::new();
+        let mut order: Vec<String> = Vec::new();
+
+        visited.insert(root_symbol_id);
+        queue.push_back((root_symbol_id, 0));
+
+        while let Some((current, dist)) = queue.pop_front() {
+            if dist >= depth {
+                continue;
+            }
+            if let Some(neighbors) = adjacency.get(current) {
+                for next in neighbors {
+                    if visited.insert(next.as_str()) {
+                        order.push(next.clone());
+                        queue.push_back((next.as_str(), dist + 1));
+                    }
+                }
+            }
+        }
+
+        Ok(order)
+    }
+
+    /// Loads the incoming adjacency map (dst → sorted srcs).
+    fn load_reverse_adjacency(&self) -> Result<HashMap<String, Vec<String>>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT dst_symbol_id, src_symbol_id FROM edges
+             ORDER BY dst_symbol_id, src_symbol_id",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        let mut adjacency: HashMap<String, Vec<String>> = HashMap::new();
+        for row in rows {
+            let (dst, src) = row?;
+            adjacency.entry(dst).or_default().push(src);
+        }
+        Ok(adjacency)
+    }
+
+    /// Loads the full outgoing adjacency map (sorted neighbors for determinism).
+    fn load_adjacency(&self) -> Result<HashMap<String, Vec<String>>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT src_symbol_id, dst_symbol_id FROM edges
+             ORDER BY src_symbol_id, dst_symbol_id",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        let mut adjacency: HashMap<String, Vec<String>> = HashMap::new();
+        for row in rows {
+            let (src, dst) = row?;
+            adjacency.entry(src).or_default().push(dst);
+        }
+        Ok(adjacency)
+    }
+
+    /// Returns direct call-graph neighbors of a symbol without loading all edges.
+    ///
+    /// When `upstream` is true, returns callers (`dst = symbol`); otherwise
+    /// callees (`src = symbol`). Each entry is `(neighbor_id, confidence)`.
+    pub fn direct_call_neighbors(
+        &self,
+        symbol_id: &str,
+        upstream: bool,
+    ) -> Result<Vec<(String, f32)>, StoreError> {
+        let sql = if upstream {
+            "SELECT src_symbol_id, confidence FROM edges
+             WHERE dst_symbol_id = ?1 AND edge_type = 'calls'
+             ORDER BY src_symbol_id"
+        } else {
+            "SELECT dst_symbol_id, confidence FROM edges
+             WHERE src_symbol_id = ?1 AND edge_type = 'calls'
+             ORDER BY dst_symbol_id"
+        };
+        let mut stmt = self.conn.prepare(sql)?;
+        let rows = stmt
+            .query_map(params![symbol_id], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, f64>(1)? as f32))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Returns all edges as `(src, dst, edge_type, confidence)` for weighted traversal.
+    pub fn load_weighted_edges(&self) -> Result<Vec<(String, String, EdgeType, f32)>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT src_symbol_id, dst_symbol_id, edge_type, confidence FROM edges
+             ORDER BY src_symbol_id, dst_symbol_id",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    str_to_edge_type(row.get::<_, String>(2)?.as_str()),
+                    row.get::<_, f64>(3)? as f32,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Returns in-degree per symbol id (structural centrality signal).
+    pub fn symbol_in_degrees(&self) -> Result<HashMap<String, u32>, StoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT dst_symbol_id, COUNT(*) FROM edges GROUP BY dst_symbol_id")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u32))
+        })?;
+        let mut out = HashMap::new();
+        for row in rows {
+            let (id, count) = row?;
+            out.insert(id, count);
+        }
+        Ok(out)
+    }
+
+    /// Counts edges per resolution tier (confidence profile for reports).
+    pub fn edge_resolution_profile(&self) -> Result<Vec<(String, usize)>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT resolution, COUNT(*) FROM edges GROUP BY resolution ORDER BY resolution",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     /// Finds a flow by exact id or case-insensitive name.
@@ -797,8 +1114,9 @@ impl IndexStore {
         };
 
         let mut edge_stmt = self.conn.prepare(
-            "SELECT id, src_symbol_id, dst_symbol_id, edge_type, boundary, confidence
-             FROM edges",
+            "SELECT id, src_symbol_id, dst_symbol_id, edge_type, boundary, confidence, resolution
+             FROM edges
+             ORDER BY src_symbol_id, dst_symbol_id, edge_type, id",
         )?;
         let edges = edge_stmt
             .query_map([], |row| {
@@ -811,6 +1129,7 @@ impl IndexStore {
                         .get::<_, Option<String>>(4)?
                         .map(|b| str_to_boundary(b.as_str())),
                     confidence: row.get(5)?,
+                    resolution: EdgeResolution::parse(row.get::<_, String>(6)?.as_str()),
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;

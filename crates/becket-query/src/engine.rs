@@ -163,11 +163,12 @@ impl QueryEngine {
         let store = self.open_store()?;
         let root = self.resolve_symbol(&store, symbol)?;
         let downstream = store.downstream_symbols(&root.id, depth)?;
+        let upstream = store.upstream_symbols(&root.id, depth)?;
 
         Ok(DependenciesResult {
             symbol: root,
             downstream,
-            upstream: Vec::new(),
+            upstream,
         })
     }
 }

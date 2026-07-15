@@ -16,7 +16,7 @@ pub use artifacts::{
     ArchitectureArtifact, DependenciesArtifact, EntrypointsArtifact, FlowsArtifact,
     SymbolsArtifact, VersionedArtifact,
 };
-pub use edge::{BoundaryKind, EdgeType};
+pub use edge::{BoundaryKind, EdgeResolution, EdgeType};
 pub use error::SchemaError;
 pub use json_schema::{
     parse_artifact, pretty_schema_for, root_schema_for, validate_artifact_json, ARTIFACT_NAMES,

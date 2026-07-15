@@ -23,22 +23,24 @@ It acts as a bridge between:
 
 ---
 
-## Use today (v0.2 — shipped)
+## Use today
 
 These work **now**. No bundled LLM — optional prose enrichment uses your MCP host's model.
 
 | Command / tool | What you get |
 |---|---|
-| `becket build` | Deterministic graph + **grounded wiki** → `.becket/*.json` + `.becket/wiki/` |
+| `becket build` | Deterministic graph + **grounded wiki** → `.becket/*.json` + `.becket/wiki/` (import-aware resolution, co-change mining, true incremental via `raw_refs`) |
 | `becket impact <symbol>` | What breaks downstream (call graph + modules) |
 | `becket flow <domain>` | End-to-end execution path across services |
-| `becket context <symbol>` | **Markdown bundle**: knowledge pages + code snippets + impact (`--budget`, `--auto-budget`, `--task`) |
+| `becket context <symbol>` | **Markdown bundle**: knowledge pages + ranked code snippets + impact (`--budget`, `--auto-budget`, `--task`) |
+| `becket report` | Index-quality metrics (`.becket/report/metrics.json`) + local HTML dashboard: token savings, edge confidence, wiki lint, bundle integrity |
+| `becket bench --last N` | Reproducible retrieval benchmark vs recent git history (recall + token cost) |
 | `becket wiki sync\|lint\|show` | Recompile stale pages, CI lint, view grounded pages |
 | `becket build --watch` | Incremental rebuild; auto-syncs stale wiki structure |
 | `becket workspace build` | Cross-repo linking (HTTP/gRPC/queue) |
 | MCP `get_context` | Same markdown bundle; `auto_budget: true` or `enrich: true` when needed |
 | MCP `get_wiki` | Grounded wiki page; `enrich=true` fills prose via sampling |
-| MCP `get_impact`, `get_flow`, `get_dependencies` | Same queries for Cursor / Claude Code |
+| MCP `get_impact`, `get_flow`, `get_dependencies` | Same queries for Cursor / Claude Code (`dependencies` includes upstream callers) |
 
 ### Quick start (3 steps)
 
@@ -48,6 +50,10 @@ cd demo && npx becket build
 
 # Or index your own project
 cd your-project && npx becket build
+
+# Validate index quality on your repo
+becket report
+becket bench --last 30
 
 # MCP: npm install -g becket becket-mcp — see website/docs.html#quickstart
 ```
@@ -109,20 +115,24 @@ your repo  →  becket build  →  .becket/ (graph + wiki)
                          markdown bundle for agents
 ```
 
-1. **`becket build`** — walks and parses the repo (tree-sitter). Builds symbols, call graph, flows, entrypoints, impact maps, and grounded wiki pages. **No LLM required.**
-2. **Persistent memory** — JSON artifacts + `.becket/wiki/*.md` survive across sessions. Incremental rebuild on `build --watch`; wiki pages get stale fingerprints when anchored symbols change.
-3. **Per-task queries** — `context`, `impact`, `flow`, and MCP tools return what you need *now*, not the whole repo.
+1. **`becket build`** — walks and parses the repo (tree-sitter). Builds symbols, an import-aware call graph with confidence tiers, flows, entrypoints, co-change pairs from git history, and grounded wiki pages. **No LLM required.**
+2. **Persistent memory** — JSON artifacts + `.becket/wiki/*.md` survive across sessions. True incremental rebuild (unchanged files skip re-parse via cached `raw_refs`); transactional writes keep a failed build from corrupting the index.
+3. **Per-task queries** — `context`, `impact`, `flow`, and MCP tools return what you need *now*, ranked by multi-signal relevance — not the whole repo.
 
 ### Capabilities
 
 | Capability | What you get |
 |---|---|
-| **Code graph** | Symbols, dependencies, call edges, entrypoints — measured from source, reproducible |
-| **Impact analysis** | Downstream callers and modules affected by a change |
+| **Code graph** | Symbols, dependencies, call edges with **confidence tiers** (`import_resolved` → `candidate`), entrypoints — measured from source, reproducible |
+| **Import-aware resolution** | Per-language import extraction + module-path → file resolution before name fallback |
+| **Impact analysis** | Downstream callers and modules affected by a change (cycle-safe BFS) |
 | **Flow reconstruction** | End-to-end paths across services (e.g. `payment` → handler → client → queue) |
+| **Co-change mining** | Files that historically change together (from `git log`) feed context ranking |
 | **Grounded wiki** | Module / service / flow pages anchored to symbol IDs; structure from the graph |
 | **Wiki lint** | Stale pages, broken claims, orphan links — deterministic checks vs live graph; `--strict` for CI |
-| **Context assembly** | One markdown bundle: wiki + ranked code snippets + impact, within `--budget` and `--task` |
+| **Context assembly** | One markdown bundle: wiki + multi-signal ranked snippets + impact, within `--budget` and `--task` |
+| **Index quality report** | `becket report` — token savings, edge confidence profile, wiki health, snippet integrity |
+| **Retrieval benchmark** | `becket bench` — recall of co-committed files vs token cost on recent commits |
 | **MCP server** | `get_context`, `get_wiki`, `get_impact`, `get_flow`, `get_dependencies` for Cursor / Claude Code |
 | **Workspace mode** | Cross-repo linking (HTTP, gRPC, queues) for monorepos and polyrepos |
 
@@ -135,6 +145,8 @@ your repo  →  becket build  →  .becket/ (graph + wiki)
 **Onboarding** — `becket flow <domain>` plus `context` with `--task onboard` for flows and overview with fewer snippets.
 
 **Enriching intent** — MCP `get_wiki` with `enrich=true` fills prose slots (intent & gotchas) using the host model; structure stays graph-compiled.
+
+**Validating the index** — after `becket build`, run `becket report` for a local dashboard (token savings, graph confidence, wiki lint, snippet freshness) and `becket bench --last 30` to measure retrieval recall against your own git history.
 
 ### Design principles
 
@@ -160,11 +172,16 @@ Generates:
   architecture.json
   symbols.json
   flows.json
-  dependencies.json
+  dependencies.json   # edges include resolution + confidence (schema 1.1.0)
   entrypoints.json
+  index.db            # SQLite cache (raw_refs, co_change, embeddings)
   wiki/               # grounded knowledge pages (symbol-anchored)
     index.md
     <page>.md
+  report/             # after becket report / bench
+    metrics.json
+    bench.json
+    index.html
 ```
 
 The JSON artifacts are produced deterministically with **no model required**.
@@ -230,6 +247,21 @@ One markdown bundle within the token budget (wiki/knowledge, impact, and snippet
 If the budget is too small, the bundle includes a notice with `recommended_tokens`. Use `--auto-budget` or raise `--budget`.
 
 Task modes: `fix` (default), `refactor`, `onboard` (adds flow overview when available).
+
+Low-confidence call-graph neighbors are marked with `?` in the bundle.
+
+---
+
+### Validate index quality
+
+```bash
+becket report              # metrics.json + HTML dashboard
+becket report --open       # open dashboard in browser
+becket bench --last 30     # recall + token cost vs recent commits
+becket bench --last 30 --json
+```
+
+`report` samples context bundles and compares token cost vs full source files, profiles edge confidence tiers, runs wiki lint, and checks that snippets still match disk. `bench` uses recent git commits as ground truth: for each commit it picks a seed symbol from a touched file and measures how many co-committed files appear in the assembled context.
 
 ---
 

@@ -178,6 +178,6 @@ pub struct DependenciesResult {
     pub symbol: SymbolRecord,
     /// Downstream symbol ids.
     pub downstream: Vec<String>,
-    /// Upstream symbol ids (not yet populated in v0).
+    /// Upstream symbol ids (callers and dependents).
     pub upstream: Vec<String>,
 }

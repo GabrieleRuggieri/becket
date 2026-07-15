@@ -441,3 +441,22 @@ Documentazione allineata a **cosa funziona oggi** (impact, flow, MCP) e **north 
 - **ADR-0007**: no RLM nel core
 - **Context ranking**: semantic neighbors (sqlite-vec) nel greedy pack, non solo post-hoc metadata
 - **Flow steps**: order 1-based nel grafo (non solo display wiki)
+
+---
+
+## 2026-07-11 — Sessione 24: graph quality, ranking multi-segnale, verificabilità
+
+### Completato
+
+- **Import-aware resolution** (`graph/imports.rs`): estrazione import per linguaggio + module-path → file; scala `EdgeResolution` con confidence (`import_resolved` → `candidate`); schema `1.1.0` additivo
+- **Build robusto**: cache `raw_refs` (incrementale vero), transazione SQLite, prune file cancellati, co-change mining da git (`history.rs`)
+- **Traversal**: BFS anti-ciclo downstream/upstream; `dependencies` popola `upstream`; guard embedder id
+- **Context ranking**: score continuo multi-segnale (proximity pesata × confidence, semantic, co-change, centralità) con pesi per task; vicini incerti marcati `?`
+- **`becket report`**: `metrics.json` + dashboard HTML (`token savings`, profilo confidence, wiki lint, integrità snippet)
+- **`becket bench --last N`**: benchmark retrieval vs commit recenti (recall file co-committati + costo token)
+- **Docs allineati**: `README.md`, `ARCHITECTURE.md`, `CODEMAP.md`, `CHANGELOG.md`, `BACKLOG.md`, `demo/README.md`, `website/docs.html`
+
+### Verificato
+
+- `cargo test --workspace` + `cargo clippy --workspace --all-targets` verdi
+- Self-test su repo Becket: build deterministica, incrementale (`0 parsed, N skipped`), report (69% token savings), bench (8 commit)

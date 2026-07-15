@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::edge::{BoundaryKind, EdgeType};
+use crate::edge::{BoundaryKind, EdgeResolution, EdgeType};
 use crate::symbol::{EntrypointKind, SymbolKind, Visibility};
 use crate::version::SCHEMA_VERSION;
 
@@ -157,6 +157,13 @@ pub struct DependencyEdgeRecord {
     pub boundary: Option<BoundaryKind>,
     /// Confidence score (1.0 = static certainty).
     pub confidence: f32,
+    /// How the edge target was resolved (drives `confidence`).
+    #[serde(default = "default_edge_resolution")]
+    pub resolution: EdgeResolution,
+}
+
+fn default_edge_resolution() -> EdgeResolution {
+    EdgeResolution::FileScoped
 }
 
 /// Reconstructed business flows (`flows.json`).

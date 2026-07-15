@@ -49,7 +49,7 @@ BECKET_HASH_EMBED=1 cargo test --all
 | `becket-embed` | Local embeddings (hash + optional ONNX) |
 | `becket-mcp` | MCP stdio server |
 
-See [CODEMAP.md](./CODEMAP.md) and [ARCHITECTURE.md](./ARCHITECTURE.md) for execution flow and design decisions.
+See [CODEMAP.md](./CODEMAP.md) and [ARCHITECTURE.md](./ARCHITECTURE.md) for execution flow and design decisions (including import-aware resolution, confidence tiers, `becket report`, and `becket bench`).
 
 **Product direction (v0.2):** deterministic graph + graph-grounded wiki + context assembly (markdown bundle). See [ADR-0006](./docs/adr/0006-grounded-knowledge-wiki.md) and [ADR-0007](./docs/adr/0007-no-rlm-in-core.md). Open items: [BACKLOG.md](./BACKLOG.md) (P1-15 release tag, P2 scale).
 

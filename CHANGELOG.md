@@ -4,6 +4,30 @@ All notable changes to Becket are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Added
+
+- **Import-aware call resolution** — full per-language import extraction (Rust `use` lists/aliases, Python `from … import … as`, JS/TS named/default/namespace imports, Go import blocks, Java imports) with module-path → file resolution; calls resolve through the importing file's import table before falling back to name matching
+- **Edge confidence tiers** — every edge carries an `EdgeResolution` (`import_resolved`, `file_scoped`, `dir_scoped`, `global_unique`, `candidate`) and a derived `confidence`; ambiguous calls now emit capped low-confidence *candidate* edges instead of being silently dropped (schema `1.1.0`, additive)
+- **Multi-signal context ranking** — continuous relevance score per candidate: confidence-weighted graph proximity, semantic similarity, git co-change coupling, and structural centrality, with task-specific weights (`fix` / `refactor` / `onboard`)
+- **Co-change mining** — `becket build` mines `git log` for files that historically change together (fails soft without git)
+- **`becket report`** — measurable index-quality metrics (`.becket/report/metrics.json`) plus a self-contained local HTML dashboard: token savings vs full files, graph confidence profile, wiki lint status, and bundle integrity check
+- **`becket bench`** — reproducible retrieval benchmark against recent git history (recall of co-committed files + token cost), so anyone can validate Becket on their own repo
+- **Upstream dependencies** — `becket-query` now populates `upstream` (callers/dependents) in dependency results
+- Uncertain call-graph neighbors are marked with `?` in context bundles
+
+### Changed
+
+- **True incremental builds** — unchanged files are no longer re-read or re-parsed: raw parse payloads are cached in the index (`raw_refs`) and reused
+- **Transactional builds** — all index writes happen in one SQLite transaction; a failed build leaves the previous index intact
+- **Cycle-safe traversal** — downstream/upstream impact uses BFS with a visited set instead of a recursive CTE (no row explosion on cyclic graphs)
+- **Embedding space guard** — the index records which embedder produced its vectors; queries skip semantic search on mismatch instead of comparing incompatible spaces
+- Deleted files are pruned from the index during incremental builds
+- **Documentation** aligned across `README.md`, `ARCHITECTURE.md`, `CODEMAP.md`, `BACKLOG.md`, `PROGRESS.md`, `demo/README.md`, `website/docs.html`, and `CONTRIBUTING.md`
+
+### Removed
+
+- Dead `HeuristicExtractor` module (tree-sitter parser has been the only extractor since v0.2)
+
 ## [0.2.3] - 2026-06-29
 
 ### Added

@@ -57,6 +57,7 @@
           <a href="#audience" data-i18n="docs.toc.audience">Who It's For</a>
           <a href="#mcp" data-i18n="docs.toc.mcp">MCP Integration</a>
           <a href="#cli" data-i18n="docs.toc.cli">CLI Reference</a>
+          <a href="#quality" data-i18n="docs.toc.quality">Quality</a>
           <a href="#wiki" data-i18n="docs.toc.wiki">Knowledge Wiki</a>
           <a href="#languages" data-i18n="docs.toc.languages">Languages</a>
           <a href="#layers" data-i18n="docs.toc.layers">Three Layers</a>
@@ -225,6 +226,10 @@ pub fn capture() {
                   <td data-i18n="docs.audience.r4">Monorepo / polyrepo</td>
                   <td data-i18n-html="docs.audience.d4"><code>becket workspace build</code> for cross-service linking</td>
                 </tr>
+                <tr>
+                  <td data-i18n="docs.audience.r5">Validating Becket on your repo</td>
+                  <td data-i18n-html="docs.audience.d5"><code>becket build</code> → <code>report</code> + <code>bench --last 30</code> for measurable recall and token savings</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -385,6 +390,34 @@ becket wiki show services</code></pre>
 becket domain add payment src/billing/** capture</code></pre>
           </div>
           <p data-i18n="docs.cli.domain.desc">Zero-config by default. Refine auto-discovered domains via CLI.</p>
+
+          <h3 data-i18n="docs.cli.quality.title">Validate index quality</h3>
+          <p data-i18n="docs.cli.quality.desc">Measurable metrics and a reproducible benchmark — run after <code>becket build</code> to validate Becket on your own repo.</p>
+          <div class="code-block glass-card">
+            <div class="code-header"><span>terminal</span><button class="copy-btn" data-copy="becket report&#10;becket report --open&#10;becket bench --last 30&#10;becket bench --last 30 --json">Copy</button></div>
+            <pre><code>becket report
+becket report --open
+becket bench --last 30
+becket bench --last 30 --json</code></pre>
+          </div>
+          <p data-i18n="docs.cli.report.desc">Writes <code>.becket/report/metrics.json</code> and a self-contained <code>index.html</code> dashboard: token savings vs full files, edge confidence profile, wiki lint status, snippet freshness.</p>
+          <p data-i18n="docs.cli.bench.desc">Uses recent git commits as ground truth: for each commit, measures recall of co-committed files in the assembled context plus token cost. Output: <code>.becket/report/bench.json</code>.</p>
+        </section>
+
+        <!-- Quality -->
+        <section id="quality" class="doc-section reveal">
+          <h2 data-i18n="docs.quality.title">Index quality &amp; benchmark</h2>
+          <p class="lead" data-i18n="docs.quality.lead">Becket ships built-in verifiability — no guesswork about whether the index is helping your agent.</p>
+
+          <h3 data-i18n="docs.quality.report.title">becket report</h3>
+          <p data-i18n="docs.quality.report.desc">Samples context bundles and compares token cost vs full source files. Profiles edge confidence tiers (<code>import_resolved</code> → <code>candidate</code>), runs wiki lint, and checks that snippets still match disk.</p>
+
+          <h3 data-i18n="docs.quality.bench.title">becket bench</h3>
+          <p data-i18n="docs.quality.bench.desc">Reproducible retrieval benchmark against your own git history. For each recent commit, picks a seed symbol from a touched file and measures how many co-committed files appear in the context bundle.</p>
+
+          <div class="callout glass-card">
+            <p data-i18n="docs.quality.note">On very small repos, token savings may be negative — bundle overhead can exceed tiny source files. The report shows this honestly.</p>
+          </div>
         </section>
 
         <!-- Wiki -->
@@ -473,11 +506,14 @@ becket domain add payment src/billing/** capture</code></pre>
               <tbody>
                 <tr><td><code>architecture.json</code></td><td data-i18n="docs.artifacts.a1">High-level structural map</td></tr>
                 <tr><td><code>symbols.json</code></td><td data-i18n="docs.artifacts.a2">Symbol catalog with locations</td></tr>
-                <tr><td><code>dependencies.json</code></td><td data-i18n="docs.artifacts.a3">Dependency graph</td></tr>
+                <tr><td><code>dependencies.json</code></td><td data-i18n="docs.artifacts.a3">Dependency graph with resolution + confidence tiers (schema 1.1.0)</td></tr>
                 <tr><td><code>flows.json</code></td><td data-i18n="docs.artifacts.a4">Reconstructed business flows</td></tr>
                 <tr><td><code>entrypoints.json</code></td><td data-i18n="docs.artifacts.a5">Detected entry points</td></tr>
                 <tr><td><code>wiki/index.md</code></td><td data-i18n="docs.artifacts.a6">Wiki router / table of contents</td></tr>
                 <tr><td><code>wiki/*.md</code></td><td data-i18n="docs.artifacts.a7">Grounded knowledge pages (symbol-anchored)</td></tr>
+                <tr><td><code>report/metrics.json</code></td><td data-i18n="docs.artifacts.a8">Index quality metrics (becket report)</td></tr>
+                <tr><td><code>report/bench.json</code></td><td data-i18n="docs.artifacts.a9">Retrieval benchmark results (becket bench)</td></tr>
+                <tr><td><code>report/index.html</code></td><td data-i18n="docs.artifacts.a10">Local HTML dashboard (becket report)</td></tr>
               </tbody>
             </table>
           </div>
@@ -551,7 +587,7 @@ becket domain add payment src/billing/** capture</code></pre>
         <!-- Architecture -->
         <section id="architecture" class="doc-section reveal">
           <h2 data-i18n="docs.arch.title">Architecture</h2>
-          <p data-i18n="docs.arch.desc">Rust-first deterministic core, graph-grounded wiki, context assembly, SQLite index, MCP server. Multi-repo workspaces and cross-service linking.</p>
+          <p data-i18n="docs.arch.desc">Rust-first deterministic core, import-aware call resolution with confidence tiers, multi-signal context ranking, graph-grounded wiki, SQLite index, MCP server. Multi-repo workspaces and cross-service linking.</p>
           <div class="arch-stack">
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l1">Surfaces</span><span>CLI · MCP (stdio) · JSON + wiki artifacts</span></div>
             <div class="arch-layer glass-card"><span class="arch-label" data-i18n="docs.arch.l5">Assembly</span><span data-i18n="docs.arch.l5d">Context bundle builder (snippets + wiki + impact)</span></div>

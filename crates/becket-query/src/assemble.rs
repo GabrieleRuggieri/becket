@@ -1,12 +1,19 @@
 //! Context assembly: code snippets + impact + markdown bundle.
+//!
+//! Relevance is a continuous multi-signal score per candidate symbol:
+//! confidence-weighted graph proximity, semantic similarity, git co-change
+//! coupling, and structural centrality — task-mode dependent weights. The
+//! packer then greedily fills the token budget in score order.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::Path;
 
+use becket_core::build::META_EMBEDDER;
 use becket_core::wiki::{sanitize_for_context, wiki_adds_context, WikiPageIndex, WikiStore};
-use becket_embed::{embed_with_model, symbol_embedding_text};
+use becket_embed::{current_embedder_id, embed_with_model, symbol_embedding_text};
 use becket_schema::artifacts::SymbolRecord;
+use becket_schema::edge::EdgeType;
 use becket_store::{BecketPaths, IndexStore};
 
 use crate::budget::{
@@ -68,8 +75,10 @@ pub fn assemble_context_with_options(
     let all_symbols = store.load_symbols()?;
     let id_to_symbol: HashMap<_, _> = all_symbols.iter().map(|s| (s.id.as_str(), s)).collect();
 
-    let callers = direct_neighbors(store, &root.id, true)?;
-    let callees = direct_neighbors(store, &root.id, false)?;
+    let caller_hits = store.direct_call_neighbors(&root.id, true)?;
+    let callee_hits = store.direct_call_neighbors(&root.id, false)?;
+    let callers: Vec<String> = caller_hits.iter().map(|(id, _)| id.clone()).collect();
+    let callees: Vec<String> = callee_hits.iter().map(|(id, _)| id.clone()).collect();
     let affected_ids = store.downstream_symbols(&root.id, impact_depth)?;
 
     let related_components: Vec<String> = all_symbols
@@ -107,19 +116,27 @@ pub fn assemble_context_with_options(
         .into_iter()
         .collect();
 
-    let semantic_ids = semantic_neighbor_ids(store, &root, 5)?;
+    let semantic_hits = semantic_neighbor_hits(store, &root, 5)?;
+    let semantic_ids: Vec<String> = semantic_hits.iter().map(|(id, _)| id.clone()).collect();
 
-    let mut ranked = rank_symbols(
+    let signals = RankSignals::collect(
+        store,
+        &root,
+        &id_to_symbol,
+        &semantic_hits,
+        &test_symbol_ids,
+        task,
+    )?;
+    let ranked = rank_candidates(
         &root,
         &callers,
         &callees,
         &test_symbol_ids,
         &semantic_ids,
         &affected_ids,
+        &signals,
         task,
     );
-    ranked.sort_by_key(|(_, priority)| *priority);
-    ranked.dedup_by(|a, b| a.0 == b.0);
 
     let max_snippets = match task {
         ContextTask::Onboard => 3,
@@ -145,14 +162,10 @@ pub fn assemble_context_with_options(
         .map(|p| sanitize_for_context(&p.body))
         .filter(|body| wiki_adds_context(body));
 
-    let caller_names: Vec<String> = callers
-        .iter()
-        .filter_map(|id| id_to_symbol.get(id.as_str()).map(|s| s.name.clone()))
-        .collect();
-    let callee_names: Vec<String> = callees
-        .iter()
-        .filter_map(|id| id_to_symbol.get(id.as_str()).map(|s| s.name.clone()))
-        .collect();
+    // Low-confidence (syntactic-guess) neighbors are marked with `?` so the
+    // agent can weigh them accordingly.
+    let caller_names: Vec<String> = neighbor_display_names(&caller_hits, &id_to_symbol);
+    let callee_names: Vec<String> = neighbor_display_names(&callee_hits, &id_to_symbol);
 
     let impact_line_tokens: Vec<u32> = affected_ids
         .iter()
@@ -425,78 +438,285 @@ fn collect_test_symbol_ids(
     out
 }
 
-fn direct_neighbors(
-    store: &IndexStore,
-    symbol_id: &str,
-    upstream: bool,
-) -> Result<Vec<String>, crate::error::QueryError> {
-    let edges = store.load_call_edges()?;
-    Ok(edges
-        .into_iter()
-        .filter_map(|(src, dst)| {
-            if upstream && dst == symbol_id {
-                Some(src)
-            } else if !upstream && src == symbol_id {
-                Some(dst)
-            } else {
-                None
-            }
+/// Confidence below this threshold is flagged as uncertain in the bundle.
+const UNCERTAIN_CONFIDENCE: f32 = 0.6;
+
+fn neighbor_display_names(
+    hits: &[(String, f32)],
+    id_to_symbol: &HashMap<&str, &SymbolRecord>,
+) -> Vec<String> {
+    hits.iter()
+        .filter_map(|(id, confidence)| {
+            id_to_symbol.get(id.as_str()).map(|s| {
+                if *confidence < UNCERTAIN_CONFIDENCE {
+                    format!("{}?", s.name)
+                } else {
+                    s.name.clone()
+                }
+            })
         })
-        .collect())
+        .collect()
 }
 
-fn rank_symbols(
+/// Per-task weights for the multi-signal relevance score.
+struct ScoreWeights {
+    proximity: f32,
+    semantic: f32,
+    cochange: f32,
+    centrality: f32,
+    /// Flat boost for related test symbols.
+    test_boost: f32,
+}
+
+impl ScoreWeights {
+    fn for_task(task: ContextTask) -> Self {
+        match task {
+            // Fix: local neighborhood + tests + empirical coupling.
+            ContextTask::Fix => Self {
+                proximity: 0.45,
+                semantic: 0.15,
+                cochange: 0.20,
+                centrality: 0.05,
+                test_boost: 0.30,
+            },
+            // Refactor: graph structure dominates (all transitive deps matter).
+            ContextTask::Refactor => Self {
+                proximity: 0.55,
+                semantic: 0.10,
+                cochange: 0.15,
+                centrality: 0.20,
+                test_boost: 0.10,
+            },
+            // Onboard: hubs and semantically related overview.
+            ContextTask::Onboard => Self {
+                proximity: 0.35,
+                semantic: 0.25,
+                cochange: 0.05,
+                centrality: 0.35,
+                test_boost: 0.0,
+            },
+        }
+    }
+}
+
+/// Normalized per-candidate signals used by the ranker.
+struct RankSignals {
+    /// Confidence-weighted graph proximity to the root (0..1].
+    proximity: HashMap<String, f32>,
+    /// Embedding similarity (0..1] for semantic neighbors.
+    semantic: HashMap<String, f32>,
+    /// Git co-change coupling with the root's file (0..1].
+    cochange: HashMap<String, f32>,
+    /// Normalized in-degree (0..1].
+    centrality: HashMap<String, f32>,
+    test_ids: HashSet<String>,
+}
+
+/// Depth for confidence-weighted proximity propagation.
+const PROXIMITY_DEPTH: u32 = 4;
+/// Per-hop decay applied on top of edge confidence.
+const PROXIMITY_DECAY: f32 = 0.7;
+
+impl RankSignals {
+    fn collect(
+        store: &IndexStore,
+        root: &SymbolRecord,
+        id_to_symbol: &HashMap<&str, &SymbolRecord>,
+        semantic_hits: &[(String, f32)],
+        test_symbol_ids: &[String],
+        _task: ContextTask,
+    ) -> Result<Self, crate::error::QueryError> {
+        let proximity = proximity_scores(store, &root.id)?;
+
+        let semantic: HashMap<String, f32> = semantic_hits.iter().cloned().collect();
+
+        // Co-change: file-level counts mapped onto candidate symbols.
+        let co_rows = store.co_change_for_file(&root.file_path)?;
+        let max_count = co_rows.iter().map(|(_, c)| *c).max().unwrap_or(0);
+        let file_scores: HashMap<&str, f32> = co_rows
+            .iter()
+            .map(|(file, count)| {
+                (
+                    file.as_str(),
+                    if max_count > 0 {
+                        *count as f32 / max_count as f32
+                    } else {
+                        0.0
+                    },
+                )
+            })
+            .collect();
+        let mut cochange = HashMap::new();
+        if !file_scores.is_empty() {
+            for symbol in id_to_symbol.values() {
+                if let Some(score) = file_scores.get(symbol.file_path.as_str()) {
+                    cochange.insert(symbol.id.clone(), *score);
+                }
+            }
+        }
+
+        let in_degrees = store.symbol_in_degrees()?;
+        let max_degree = in_degrees.values().copied().max().unwrap_or(0);
+        let centrality: HashMap<String, f32> = if max_degree > 0 {
+            in_degrees
+                .into_iter()
+                .map(|(id, degree)| (id, degree as f32 / max_degree as f32))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
+        Ok(Self {
+            proximity,
+            semantic,
+            cochange,
+            centrality,
+            test_ids: test_symbol_ids.iter().cloned().collect(),
+        })
+    }
+
+    fn score_for(&self, id: &str, weights: &ScoreWeights) -> f32 {
+        let mut score = 0.0;
+        score += weights.proximity * self.proximity.get(id).copied().unwrap_or(0.0);
+        score += weights.semantic * self.semantic.get(id).copied().unwrap_or(0.0);
+        score += weights.cochange * self.cochange.get(id).copied().unwrap_or(0.0);
+        score += weights.centrality * self.centrality.get(id).copied().unwrap_or(0.0);
+        if self.test_ids.contains(id) {
+            score += weights.test_boost;
+        }
+        score
+    }
+}
+
+/// Confidence-weighted proximity: best path product of
+/// `confidence × type_weight × decay` per hop, propagated both directions.
+///
+/// Import edges get a low type weight (file-level coupling), candidate edges
+/// are naturally discounted by their 0.25 confidence.
+fn proximity_scores(
+    store: &IndexStore,
+    root_id: &str,
+) -> Result<HashMap<String, f32>, crate::error::QueryError> {
+    let edges = store.load_weighted_edges()?;
+    let mut adjacency: HashMap<&str, Vec<(&str, f32)>> = HashMap::new();
+    for (src, dst, edge_type, confidence) in &edges {
+        let weight = confidence * edge_type_weight(*edge_type);
+        adjacency
+            .entry(src.as_str())
+            .or_default()
+            .push((dst, weight));
+        adjacency
+            .entry(dst.as_str())
+            .or_default()
+            .push((src, weight));
+    }
+
+    let mut best: HashMap<String, f32> = HashMap::new();
+    best.insert(root_id.to_string(), 1.0);
+    let mut frontier: VecDeque<(String, f32, u32)> = VecDeque::new();
+    frontier.push_back((root_id.to_string(), 1.0, 0));
+
+    while let Some((current, score, depth)) = frontier.pop_front() {
+        if depth >= PROXIMITY_DEPTH {
+            continue;
+        }
+        let Some(neighbors) = adjacency.get(current.as_str()) else {
+            continue;
+        };
+        for (next, weight) in neighbors {
+            let next_score = score * weight * PROXIMITY_DECAY;
+            if next_score < 0.01 {
+                continue;
+            }
+            let entry = best.entry((*next).to_string()).or_insert(0.0);
+            if next_score > *entry {
+                *entry = next_score;
+                frontier.push_back(((*next).to_string(), next_score, depth + 1));
+            }
+        }
+    }
+
+    best.remove(root_id);
+    Ok(best)
+}
+
+fn edge_type_weight(edge_type: EdgeType) -> f32 {
+    match edge_type {
+        EdgeType::Calls => 1.0,
+        EdgeType::Extends | EdgeType::Implements => 0.9,
+        EdgeType::Http | EdgeType::Grpc | EdgeType::Queue => 0.8,
+        EdgeType::Reads | EdgeType::Writes | EdgeType::References => 0.5,
+        EdgeType::Imports => 0.3,
+    }
+}
+
+/// Ranks all candidate symbols by the continuous multi-signal score.
+///
+/// The root always comes first; ties break on symbol id for determinism.
+#[allow(clippy::too_many_arguments)]
+fn rank_candidates(
     root: &SymbolRecord,
     callers: &[String],
     callees: &[String],
     test_ids: &[String],
     semantic: &[String],
     affected: &[String],
+    signals: &RankSignals,
     task: ContextTask,
-) -> Vec<(String, u8)> {
-    let mut out = Vec::new();
-    out.push((root.id.clone(), 0));
-    for id in callers {
-        out.push((id.clone(), 1));
+) -> Vec<(String, f32)> {
+    let weights = ScoreWeights::for_task(task);
+
+    let mut candidates: Vec<&String> = Vec::new();
+    candidates.extend(callers);
+    candidates.extend(callees);
+    if !matches!(task, ContextTask::Onboard) {
+        candidates.extend(test_ids);
     }
-    for id in callees {
-        out.push((id.clone(), 2));
-    }
-    if matches!(task, ContextTask::Fix) {
-        for id in test_ids {
-            out.push((id.clone(), 3));
+    candidates.extend(semantic);
+    candidates.extend(affected);
+
+    let mut seen = HashSet::new();
+    let mut scored: Vec<(String, f32)> = Vec::new();
+    for id in candidates {
+        if *id == root.id || !seen.insert(id.clone()) {
+            continue;
         }
+        scored.push((id.clone(), signals.score_for(id, &weights)));
     }
-    let semantic_priority = if matches!(task, ContextTask::Fix) {
-        4
-    } else {
-        3
-    };
-    for id in semantic {
-        if id != &root.id {
-            out.push((id.clone(), semantic_priority));
-        }
-    }
-    let affected_priority = if matches!(task, ContextTask::Fix) {
-        5
-    } else {
-        4
-    };
-    for id in affected {
-        if id != &root.id {
-            out.push((id.clone(), affected_priority));
-        }
-    }
+
+    scored.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+
+    let mut out = Vec::with_capacity(scored.len() + 1);
+    out.push((root.id.clone(), f32::MAX));
+    out.extend(scored);
     out
 }
 
-fn semantic_neighbor_ids(
+/// Semantic neighbors with similarity scores.
+///
+/// Guard: when the index was built in a different embedding space (hash vs
+/// ONNX), vector distances are meaningless — skip semantic search entirely.
+fn semantic_neighbor_hits(
     store: &IndexStore,
     symbol: &SymbolRecord,
     limit: usize,
-) -> Result<Vec<String>, crate::error::QueryError> {
+) -> Result<Vec<(String, f32)>, crate::error::QueryError> {
     if store.count_symbol_embeddings()? == 0 {
         return Ok(Vec::new());
+    }
+    if let Ok(Some(indexed_space)) = store.get_meta(META_EMBEDDER) {
+        if indexed_space != current_embedder_id() {
+            tracing::debug!(
+                indexed = %indexed_space,
+                current = %current_embedder_id(),
+                "embedding space mismatch; skipping semantic neighbors"
+            );
+            return Ok(Vec::new());
+        }
     }
     let query = embed_with_model(&symbol_embedding_text(symbol));
     let hits = store.nearest_symbol_ids(&query, limit + 1)?;
@@ -504,7 +724,7 @@ fn semantic_neighbor_ids(
         .into_iter()
         .filter(|(id, _)| id != &symbol.id)
         .take(limit)
-        .map(|(id, _)| id)
+        .map(|(id, distance)| (id, (1.0 / (1.0 + distance)) as f32))
         .collect())
 }
 
@@ -755,6 +975,13 @@ fn render_markdown(input: &RenderInput<'_>) -> String {
         if !callees.is_empty() {
             md.push_str(&format!("**Callees:** {}\n\n", callees.join(", ")));
         }
+        if callers
+            .iter()
+            .chain(callees.iter())
+            .any(|n| n.ends_with('?'))
+        {
+            md.push_str("_Names marked `?` are uncertain syntactic matches (low confidence)._\n\n");
+        }
     }
 
     if *impact_shown > 0 {
@@ -819,27 +1046,59 @@ mod tests {
         assert_eq!(ids, vec!["sym_test".to_string()]);
     }
 
+    fn empty_signals(test_ids: &[&str]) -> RankSignals {
+        RankSignals {
+            proximity: HashMap::new(),
+            semantic: HashMap::new(),
+            cochange: HashMap::new(),
+            centrality: HashMap::new(),
+            test_ids: test_ids.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
     #[test]
     fn fix_task_ranks_tests_before_affected() {
         let root = sample_symbol("sym_root", "pay", "src/pay.rs");
-        let ranked = rank_symbols(
+        let ranked = rank_candidates(
             &root,
             &[],
             &[],
             &["sym_test".into()],
             &[],
             &["sym_far".into()],
+            &empty_signals(&["sym_test"]),
             ContextTask::Fix,
         );
-        let test_rank = ranked
-            .iter()
-            .find(|(id, _)| id == "sym_test")
-            .map(|(_, r)| *r);
-        let far_rank = ranked
-            .iter()
-            .find(|(id, _)| id == "sym_far")
-            .map(|(_, r)| *r);
-        assert!(test_rank.unwrap() < far_rank.unwrap());
+        let test_pos = ranked.iter().position(|(id, _)| id == "sym_test").unwrap();
+        let far_pos = ranked.iter().position(|(id, _)| id == "sym_far").unwrap();
+        assert!(
+            test_pos < far_pos,
+            "test boost should outrank distant impact"
+        );
+        assert_eq!(ranked[0].0, "sym_root", "root always first");
+    }
+
+    #[test]
+    fn higher_proximity_ranks_first_with_deterministic_ties() {
+        let root = sample_symbol("sym_root", "pay", "src/pay.rs");
+        let mut signals = empty_signals(&[]);
+        signals.proximity.insert("sym_near".into(), 0.9);
+        signals.proximity.insert("sym_mid".into(), 0.4);
+        let ranked = rank_candidates(
+            &root,
+            &["sym_mid".into(), "sym_near".into()],
+            &[],
+            &[],
+            &[],
+            &["sym_a_tie".into(), "sym_b_tie".into()],
+            &signals,
+            ContextTask::Refactor,
+        );
+        let ids: Vec<&str> = ranked.iter().map(|(id, _)| id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec!["sym_root", "sym_near", "sym_mid", "sym_a_tie", "sym_b_tie"]
+        );
     }
 
     #[test]

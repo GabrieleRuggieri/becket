@@ -121,7 +121,9 @@ impl BecketMcpServer {
         let code = match &err {
             becket_query::QueryError::NotFound(_) => ErrorCode::INVALID_PARAMS,
             becket_query::QueryError::IndexMissing(_) => ErrorCode::INVALID_REQUEST,
-            becket_query::QueryError::Store(_) => ErrorCode::INTERNAL_ERROR,
+            becket_query::QueryError::Store(_)
+            | becket_query::QueryError::Io(_)
+            | becket_query::QueryError::Internal(_) => ErrorCode::INTERNAL_ERROR,
         };
         McpError::new(code, err.to_string(), None)
     }

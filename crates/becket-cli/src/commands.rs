@@ -232,8 +232,94 @@ pub fn execute(cli: Cli) -> Result<()> {
                 }
             }
         }
+        Commands::Report { json, open } => {
+            let metrics = becket_query::generate_report(&cli.repo)?;
+            let report_dir = cli.repo.join(".becket/report");
+            if json {
+                print_json(&metrics)?;
+            } else {
+                println!(
+                    "report: {} symbols, {} edges ({:.0}% high-confidence), {} co-change pairs",
+                    metrics.graph.symbols,
+                    metrics.graph.edges,
+                    metrics.graph.high_confidence_ratio * 100.0,
+                    metrics.graph.co_change_pairs,
+                );
+                if metrics.tokens.sampled_symbols > 0 {
+                    println!(
+                        "tokens: mean savings {:.0}% (bundle ~{} vs full files ~{}, {} samples)",
+                        metrics.tokens.mean_savings_ratio * 100.0,
+                        metrics.tokens.mean_bundle_tokens,
+                        metrics.tokens.mean_baseline_tokens,
+                        metrics.tokens.sampled_symbols,
+                    );
+                }
+                if metrics.wiki.lint_available {
+                    println!(
+                        "wiki: {} stale, {} claim errors, {} broken links",
+                        metrics.wiki.stale_pages,
+                        metrics.wiki.claim_errors,
+                        metrics.wiki.broken_links,
+                    );
+                }
+                println!(
+                    "integrity: {}/{} snippets fresh",
+                    metrics.integrity.snippets_checked - metrics.integrity.stale_snippets,
+                    metrics.integrity.snippets_checked,
+                );
+                println!("dashboard: {}", report_dir.join("index.html").display());
+            }
+            if open {
+                let _ = std::process::Command::new("open")
+                    .arg(report_dir.join("index.html"))
+                    .spawn();
+            }
+        }
+        Commands::Bench { last, json } => {
+            let report = becket_query::run_bench(&cli.repo, last)?;
+            if json {
+                print_json(&report)?;
+            } else if report.commits_evaluated == 0 {
+                println!(
+                    "bench: no evaluable commits in the last {last} (need ≥2 indexed files per commit; is this a git repo?)"
+                );
+            } else {
+                println!(
+                    "bench: {} commits evaluated (of {} requested)",
+                    report.commits_evaluated, report.commits_requested
+                );
+                println!(
+                    "mean recall: {:.0}%  ·  mean token cost: {:.0}% of full files",
+                    report.mean_recall * 100.0,
+                    report.mean_token_ratio * 100.0,
+                );
+                println!(
+                    "{:<12} {:<24} {:>7} {:>9} {:>9}",
+                    "commit", "seed", "recall", "bundle", "full"
+                );
+                for case in &report.cases {
+                    println!(
+                        "{:<12} {:<24} {:>6.0}% {:>9} {:>9}",
+                        case.commit,
+                        truncate(&case.seed_symbol, 24),
+                        case.recall * 100.0,
+                        case.bundle_tokens,
+                        case.full_files_tokens,
+                    );
+                }
+                println!("saved: .becket/report/bench.json");
+            }
+        }
     }
     Ok(())
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}…", &s[..max.saturating_sub(1)])
+    }
 }
 
 fn load_stale_queue(paths: &BecketPaths) -> Result<Vec<String>> {

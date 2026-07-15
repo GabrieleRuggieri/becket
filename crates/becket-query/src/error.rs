@@ -16,4 +16,12 @@ pub enum QueryError {
     /// Symbol or flow not found.
     #[error("not found: {0}")]
     NotFound(String),
+
+    /// Filesystem failure while reading source or writing reports.
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// Internal serialization or invariant failure.
+    #[error("internal error: {0}")]
+    Internal(String),
 }

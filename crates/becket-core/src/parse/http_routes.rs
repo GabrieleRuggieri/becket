@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 /// A detected HTTP route bound to a handler symbol name (resolved at index time).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedHttpRoute {
     /// Repository-relative file path.
     pub file_path: String,
